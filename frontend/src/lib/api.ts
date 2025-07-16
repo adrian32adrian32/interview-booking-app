@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api';
 
 export const getAuthHeader = (): HeadersInit => {
   const token = localStorage.getItem('token');
@@ -34,8 +34,14 @@ export const api = {
     },
 
     logout: () => {
+      // Șterge din localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      
+      // Șterge cookie-ul
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
+      
+      // Redirect la login
       window.location.href = '/login';
     },
   },
@@ -68,6 +74,58 @@ export const api = {
         method: 'POST',
         headers: getAuthHeader(),
         body: formData,
+      });
+      return response.json();
+    },
+
+    getDocuments: async () => {
+      const response = await fetch(`${API_URL}/users/documents`, {
+        headers: getAuthHeader(),
+      });
+      return response.json();
+    },
+
+    deleteDocument: async (documentId: string) => {
+      const response = await fetch(`${API_URL}/users/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: getAuthHeader(),
+      });
+      return response.json();
+    },
+  },
+
+  // Booking endpoints
+  bookings: {
+    getAvailableSlots: async (date: string) => {
+      const response = await fetch(`${API_URL}/bookings/slots?date=${date}`, {
+        headers: getAuthHeader(),
+      });
+      return response.json();
+    },
+
+    createBooking: async (data: { date: string; time: string; type: string }) => {
+      const response = await fetch(`${API_URL}/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        } as HeadersInit,
+        body: JSON.stringify(data),
+      });
+      return response.json();
+    },
+
+    getMyBookings: async () => {
+      const response = await fetch(`${API_URL}/bookings/my`, {
+        headers: getAuthHeader(),
+      });
+      return response.json();
+    },
+
+    cancelBooking: async (bookingId: string) => {
+      const response = await fetch(`${API_URL}/bookings/${bookingId}/cancel`, {
+        method: 'PUT',
+        headers: getAuthHeader(),
       });
       return response.json();
     },

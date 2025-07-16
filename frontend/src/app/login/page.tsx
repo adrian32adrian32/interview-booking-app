@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api'}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,6 +34,9 @@ export default function LoginPage() {
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         
+        // Salvează token și în cookie pentru middleware
+        document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
+        
         // Redirect based on role
         if (data.data.user.role === 'admin') {
           router.push('/admin/dashboard');
@@ -43,7 +46,7 @@ export default function LoginPage() {
       } else {
         setError(data.message || 'Eroare la autentificare');
       }
-} catch {
+    } catch {
       setError('Eroare de conexiune. Încearcă din nou.');
     } finally {
       setLoading(false);

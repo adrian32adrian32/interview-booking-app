@@ -36,7 +36,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api'}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,16 +51,19 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Salvează token și user
+        // Salvează token și user în localStorage
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
+        
+        // Salvează token și în cookie pentru middleware
+        document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
         
         // Redirect la dashboard
         router.push('/dashboard');
       } else {
         setError(data.message || 'Eroare la înregistrare');
       }
-    } catch (err) {
+    } catch {
       setError('Eroare de conexiune. Încearcă din nou.');
     } finally {
       setLoading(false);
