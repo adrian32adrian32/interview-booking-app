@@ -6,15 +6,25 @@ const compression = require('compression');
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Importă configurația bazei de date și rutele
+const db = require('./src/config/database');
+const authRoutes = require('./src/routes/authRoutes');
+
 // Crează aplicația Express
 const app = express();
+
+// Trust proxy pentru Nginx
+app.set('trust proxy', 1);
 
 // Port din .env sau 5000
 const PORT = process.env.PORT || 5000;
 
 // Middleware-uri pentru securitate și logging
 app.use(helmet()); // Securitate headers
-app.use(cors()); // Permite cereri cross-origin
+app.use(cors({
+  origin: ['http://94.156.250.138', 'http://localhost:3000'],
+  credentials: true
+})); // Permite cereri cross-origin
 app.use(compression()); // Compresie răspunsuri
 app.use(morgan('dev')); // Logging în consolă
 app.use(express.json()); // Parsare JSON body
@@ -24,9 +34,14 @@ app.use(express.urlencoded({ extended: true })); // Parsare form data
 const rateLimit = require('express-rate-limit');
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minute
-  max: 100 // maxim 100 cereri per IP
+  max: 100, // maxim 100 cereri per IP
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
+
+// Rute API
+app.use('/api/auth', authRoutes);
 
 // Test route pentru a verifica că serverul funcționează
 app.get('/', (req, res) => {
@@ -35,7 +50,14 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       test: 'GET /',
-      health: 'GET /api/health'
+      health: 'GET /api/health',
+      auth: {
+        register: 'POST /api/auth/register',
+        login: 'POST /api/auth/login',
+        me: 'GET /api/auth/me',
+        profile: 'PUT /api/auth/profile',
+        changePassword: 'PUT /api/auth/change-password'
+      }
     }
   });
 });
@@ -74,4 +96,4 @@ app.listen(PORT, () => {
   console.log(`📡 Listening on: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
   console.log(`📅 Started at: ${new Date().toLocaleString('ro-RO')}\n`);
-}); 
+});
