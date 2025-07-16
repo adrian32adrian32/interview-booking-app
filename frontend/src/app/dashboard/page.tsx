@@ -3,17 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, getUser } from '@/lib/api';
+import DocumentUpload from '@/components/DocumentUpload';
+import DocumentsList from '@/components/DocumentsList';
 
 export default function DashboardPage() {
   const router = useRouter();
-const [user, setUser] = useState<{
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-} | null>(null);
+  const [user, setUser] = useState<{
+    id: string;
+    email: string;
+    username: string;
+    role: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
+  const [refreshDocuments, setRefreshDocuments] = useState(0);
 
   useEffect(() => {
     const userData = getUser();
@@ -27,6 +30,11 @@ const [user, setUser] = useState<{
 
   const handleLogout = () => {
     api.auth.logout();
+  };
+
+  const handleDocumentUploadSuccess = () => {
+    // Incrementează counter pentru a forța re-render la DocumentsList
+    setRefreshDocuments(prev => prev + 1);
   };
 
   if (loading) {
@@ -130,29 +138,41 @@ const [user, setUser] = useState<{
 
           {activeTab === 'documents' && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-6">
                 Încarcă Documente
               </h3>
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 48 48"
-                  >
-                    <path
-                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <p className="mt-2 text-sm text-gray-600">
-                    Click pentru a încărca sau trage fișierele aici
-                  </p>
-                  <p className="text-xs text-gray-500">PNG, JPG, PDF până la 10MB</p>
-                </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <DocumentUpload 
+                  type="id_front" 
+                  label="Buletin/CI - Față"
+                  onUploadSuccess={handleDocumentUploadSuccess}
+                />
+                
+                <DocumentUpload 
+                  type="id_back" 
+                  label="Buletin/CI - Verso"
+                  onUploadSuccess={handleDocumentUploadSuccess}
+                />
+                
+                <DocumentUpload 
+                  type="selfie" 
+                  label="Selfie cu buletinul"
+                  onUploadSuccess={handleDocumentUploadSuccess}
+                />
+                
+                <DocumentUpload 
+                  type="other" 
+                  label="Alt document (opțional)"
+                  onUploadSuccess={handleDocumentUploadSuccess}
+                />
+              </div>
+              
+              <div className="mt-8">
+                <h4 className="text-md font-medium text-gray-900 mb-4">
+                  Documente încărcate
+                </h4>
+                <DocumentsList key={refreshDocuments} />
               </div>
             </div>
           )}
