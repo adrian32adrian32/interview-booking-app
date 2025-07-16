@@ -8,7 +8,7 @@ dotenv.config();
 
 // Importă configurația bazei de date și rutele
 const db = require('./src/config/database');
-const userRoutes = require('./src/routes/userRoutes');
+const adminRoutes = require('./src/routes/adminRoutes');
 
 // Crează aplicația Express
 const app = express();
@@ -41,7 +41,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Rute API
-app.use('/api/users', userRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Test route pentru a verifica că serverul funcționează
 app.get('/', (req, res) => {

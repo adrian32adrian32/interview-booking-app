@@ -103,17 +103,17 @@ export const api = {
       return response.json();
     },
 
-    createBooking: async (data: { date: string; time: string; type: string }) => {
-      const response = await fetch(`${API_URL}/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeader(),
-        } as HeadersInit,
-        body: JSON.stringify(data),
-      });
-      return response.json();
-    },
+    createBooking: async (data: { slotId: string; date: string; time: string }) => {
+  const response = await fetch(`${API_URL}/bookings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+    } as HeadersInit,
+    body: JSON.stringify({ slotId: data.slotId }), // Trimite doar slotId
+  });
+  return response.json();
+},
 
     getMyBookings: async () => {
       const response = await fetch(`${API_URL}/bookings/my`, {

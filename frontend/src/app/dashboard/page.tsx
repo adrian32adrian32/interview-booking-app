@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api, getUser } from '@/lib/api';
 import DocumentUpload from '@/components/DocumentUpload';
 import DocumentsList from '@/components/DocumentsList';
+import BookingCalendar from '@/components/BookingCalendar';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -179,12 +180,10 @@ export default function DashboardPage() {
 
           {activeTab === 'booking' && (
             <div className="bg-white shadow overflow-hidden sm:rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Alege Data și Ora pentru Interviu
+              <h3 className="text-lg font-medium text-gray-900 mb-6">
+                Programează-ți Interviul
               </h3>
-              <p className="text-gray-600">
-                Sistemul de programări va fi disponibil în curând...
-              </p>
+              <BookingCalendar />
             </div>
           )}
         </div>
