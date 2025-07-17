@@ -6,9 +6,14 @@ const compression = require('compression');
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Importă configurația bazei de date și rutele
+// Importă configurația bazei de date
 const db = require('./src/config/database');
+
+// Importă toate rutele
+const authRoutes = require('./src/routes/authRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const userRoutes = require('./src/routes/userRoutes');
+const bookingRoutes = require('./src/routes/bookingRoutes');
 
 // Crează aplicația Express
 const app = express();
@@ -22,7 +27,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware-uri pentru securitate și logging
 app.use(helmet()); // Securitate headers
 app.use(cors({
-  origin: ['http://94.156.250.138', 'http://localhost:3000'],
+  origin: ['http://94.156.250.138', 'http://localhost:3000', 'http://94.156.250.138:3000'],
   credentials: true
 })); // Permite cereri cross-origin
 app.use(compression()); // Compresie răspunsuri
@@ -41,6 +46,9 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Rute API
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/bookings', bookingRoutes);
 
 // Test route pentru a verifica că serverul funcționează
@@ -49,51 +57,47 @@ app.get('/', (req, res) => {
     message: 'Bine ai venit la API-ul pentru Interview Booking App!',
     version: '1.0.0',
     endpoints: {
-      test: 'GET /',
-      health: 'GET /api/health',
-      auth: {
-        register: 'POST /api/auth/register',
-        login: 'POST /api/auth/login',
-        me: 'GET /api/auth/me',
-        profile: 'PUT /api/auth/profile',
-        changePassword: 'PUT /api/auth/change-password'
-      }
+      auth: '/api/auth',
+      admin: '/api/admin',
+      users: '/api/users',
+      bookings: '/api/bookings'
     }
   });
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV
+    uptime: process.uptime()
   });
 });
 
-// 404 handler pentru rute care nu există
-app.use('*', (req, res) => {
+// 404 handler
+app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Ruta nu a fost găsită!'
+    message: 'Endpoint negăsit'
   });
 });
 
 // Error handler global
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error:', err.stack);
+  
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Eroare internă a serverului!',
+    message: err.message || 'Eroare internă server',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // Pornește serverul
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server pornit cu succes!`);
+  console.log('\n🚀 Server pornit cu succes!');
   console.log(`📡 Listening on: http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`📅 Started at: ${new Date().toLocaleString('ro-RO')}\n`);
+  console.log(`📅 Started at: ${new Date().toLocaleString('ro-RO')}`);
+  console.log('');
 });

@@ -1,21 +1,45 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  login, 
-  register, 
-  getMe, 
-  updateProfile, 
-  changePassword 
-} = require('../controllers/authController');
+const authController = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+  validateRegister,
+  validateLogin,
+  validateForgotPassword,
+  validateResetPassword,
+  handleValidationErrors
+} = require('../utils/authValidators');
 
 // Rute publice
-router.post('/login', login);
-router.post('/register', register);
+router.post('/register', 
+  validateRegister, 
+  handleValidationErrors, 
+  authController.register
+);
+
+router.post('/login', 
+  validateLogin, 
+  handleValidationErrors, 
+  authController.login
+);
+
+router.post('/forgot-password', 
+  validateForgotPassword, 
+  handleValidationErrors, 
+  authController.forgotPassword
+);
+
+router.post('/reset-password', 
+  validateResetPassword, 
+  handleValidationErrors, 
+  authController.resetPassword
+);
+
+router.get('/verify-email/:token', authController.verifyEmail);
+
+router.post('/refresh-token', authController.refreshToken);
 
 // Rute protejate
-router.get('/me', protect, getMe);
-router.put('/profile', protect, updateProfile);
-router.put('/change-password', protect, changePassword);
+router.post('/logout', protect, authController.logout);
 
 module.exports = router;
