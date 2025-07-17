@@ -15,6 +15,7 @@ import {
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { Key } from 'lucide-react';
 
 interface User {
   id: number;
@@ -75,7 +76,33 @@ export default function AdminUsersPage() {
     if (!confirm('Ești sigur că vrei să ștergi acest utilizator?')) {
       return;
     }
+// Adaugă această funcție după handleDelete
+const handleResetPassword = async (userId: number, userEmail: string) => {
+  const newPassword = prompt(`Introdu noua parolă pentru ${userEmail}:`);
+  
+  if (!newPassword || newPassword.length < 8) {
+    toast.error('Parola trebuie să aibă minim 8 caractere!');
+    return;
+  }
 
+  try {
+    await api.post(`/admin/users/${userId}/reset-password`, { 
+      newPassword 
+    });
+    toast.success('Parolă resetată cu succes!');
+  } catch (error) {
+    toast.error('Eroare la resetarea parolei');
+  }
+};
+
+// În tabel, adaugă un buton nou:
+<button
+  onClick={() => handleResetPassword(user.id, user.email)}
+  className="text-yellow-600 hover:text-yellow-800"
+  title="Resetează parola"
+>
+  <Key className="h-5 w-5" />
+</button>
     try {
       await api.delete(`/admin/users/${userId}`);
       toast.success('Utilizator șters cu succes!');

@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import toast from 'react-hot-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalid'),
   password: z.string().min(1, 'Parola este obligatorie'),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginMessage, setLoginMessage] = useState<{type: 'error' | 'success', message: string} | null>(null);
 
   const {
     register,
@@ -32,12 +34,45 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('📧 Form data:', data); // DEBUG
+    
     setLoading(true);
+    setLoginMessage(null);
+    
     try {
-      const result = await login(data.email, data.password, data.rememberMe);
-      if (!result.success) {
-        // Error handled by useAuth hook
+      console.log('🚀 Calling login function...'); // DEBUG
+      const result = await login(data);
+      console.log('✅ Login result:', result); // DEBUG
+      
+      if (result.success) {
+        setLoginMessage({
+          type: 'success',
+          message: 'Autentificare reușită! Te redirecționăm...'
+        });
+        
+        toast.success('Bine ai revenit!');
+        
+        // Așteaptă puțin pentru a afișa mesajul
+        setTimeout(() => {
+          const redirectUrl = result.data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+          console.log('🔀 Redirecting to:', redirectUrl); // DEBUG
+          router.push(redirectUrl);
+        }, 1000);
+      } else {
+        console.error('❌ Login failed:', result); // DEBUG
+        setLoginMessage({
+          type: 'error',
+          message: result.message || 'Date de autentificare incorecte!'
+        });
       }
+    } catch (error: any) {
+      console.error('💥 Login error:', error); // DEBUG
+      console.error('Error response:', error.response); // DEBUG
+      
+      setLoginMessage({
+        type: 'error',
+        message: error.response?.data?.message || error.message || 'Email sau parolă incorectă!'
+      });
     } finally {
       setLoading(false);
     }
@@ -54,6 +89,21 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {loginMessage && (
+        <div className={`mb-6 p-4 rounded-lg flex items-center space-x-2 ${
+          loginMessage.type === 'error' 
+            ? 'bg-red-50 text-red-800 border border-red-200' 
+            : 'bg-green-50 text-green-800 border border-green-200'
+        }`}>
+          {loginMessage.type === 'error' ? (
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          ) : (
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+          )}
+          <p className="text-sm">{loginMessage.message}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -67,6 +117,7 @@ export default function LoginPage() {
               id="email"
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="nume@example.com"
+              autoComplete="email"
             />
           </div>
           {errors.email && (
@@ -86,6 +137,7 @@ export default function LoginPage() {
               id="password"
               className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="••••••••"
+              autoComplete="current-password"
             />
             <button
               type="button"
@@ -118,7 +170,7 @@ export default function LoginPage() {
 
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="text-sm text-blue-600 hover:text-blue-800"
           >
             Ai uitat parola?
           </Link>
@@ -156,6 +208,34 @@ export default function LoginPage() {
             Înregistrează-te
           </Link>
         </p>
+      </div>
+
+      {/* DEBUG - Test direct API */}
+      <div className="mt-8 text-center">
+        <button
+          onClick={async () => {
+            console.log('🧪 Testing direct API call...');
+            try {
+              const response = await fetch('http://94.156.250.138/api/auth/login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email: 'admin@example.com',
+                  password: 'admin123'
+                })
+              });
+              const data = await response.json();
+              console.log('🧪 Direct API response:', data);
+            } catch (error) {
+              console.error('🧪 Direct API error:', error);
+            }
+          }}
+          className="text-xs text-gray-500 underline"
+        >
+          Test Direct API
+        </button>
       </div>
     </>
   );

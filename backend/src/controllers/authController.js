@@ -46,6 +46,14 @@ const register = async (req, res) => {
 
     const { email, password, firstName, lastName } = req.body;
     
+    // Validare suplimentară
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email invalid'
+      });
+    }
+    
     // Generează username automat din email
     const username = email.split('@')[0].toLowerCase();
 
@@ -139,21 +147,71 @@ const register = async (req, res) => {
 
 // Login - Doar cu email și parolă
 const login = async (req, res) => {
+  console.log('=================== LOGIN DEBUG ===================');
+  console.log('1. RAW BODY:', req.body);
+  console.log('2. BODY KEYS:', Object.keys(req.body || {}));
+  console.log('3. BODY STRING:', JSON.stringify(req.body));
+  console.log('================================================');
+  
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+    // Nu verifica validationResult pentru debugging
+    
+    // Extrage datele direct din body
+    let email = req.body.email;
+    let password = req.body.password;
+    let rememberMe = req.body.rememberMe;
+
+    console.log('🔍 EXTRACTED:', { 
+      email, 
+      emailType: typeof email,
+      password: password ? '[HIDDEN]' : 'undefined', 
+      rememberMe 
+    });
+
+    // Dacă email vine ca obiect, încearcă să extragi valorile
+    if (email && typeof email === 'object') {
+      console.log('⚠️ Email este obiect, încerc să extrag valorile...');
+      // Poate datele sunt într-un sub-obiect
+      if (email.email) {
+        password = email.password;
+        rememberMe = email.rememberMe;
+        email = email.email;
+      } else {
+        // Încearcă să ia prima cheie
+        const keys = Object.keys(email);
+        if (keys.length > 0) {
+          const firstKey = keys[0];
+          email = email[firstKey];
+        }
+      }
+      console.log('📧 După extragere:', { email, emailType: typeof email });
+    }
+
+    // Validare finală
+    if (!email || typeof email !== 'string') {
+      console.error('❌ Email invalid final:', email, typeof email);
       return res.status(400).json({
         success: false,
-        errors: errors.array()
+        message: 'Email invalid - verifică formatul datelor'
       });
     }
 
-    const { email, password, rememberMe } = req.body;
+    if (!password || typeof password !== 'string') {
+      console.error('❌ Password invalid:', typeof password);
+      return res.status(400).json({
+        success: false,
+        message: 'Parolă invalidă'
+      });
+    }
+
+    // Curăță email-ul
+    const cleanEmail = email.trim().toLowerCase();
+    console.log('✅ Clean email:', cleanEmail);
 
     // Găsește user după email
     const userQuery = await pool.query(
       'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [cleanEmail]
     );
 
     if (userQuery.rows.length === 0) {
@@ -182,6 +240,8 @@ const login = async (req, res) => {
         message: 'Email sau parolă incorectă!'
       });
     }
+
+    console.log('✅ Login success pentru user:', user.email);
 
     // Generare tokens
     const { accessToken, refreshToken } = generateTokens(user);
@@ -232,17 +292,26 @@ const forgotPassword = async (req, res) => {
       });
     }
 
+    // Validare email
+    if (typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email invalid'
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
     // Verifică dacă user-ul există
     const userQuery = await pool.query(
       'SELECT id, first_name, email FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [cleanEmail]
     );
 
     if (userQuery.rows.length === 0) {
-      // Din motive de securitate, nu dezvăluim dacă email-ul există sau nu
-      return res.json({
-        success: true,
-        message: 'Dacă adresa de email există în sistem, vei primi instrucțiuni de resetare.'
+      return res.status(404).json({
+        success: false,
+        message: 'Nu există niciun cont înregistrat cu această adresă de email!'
       });
     }
 

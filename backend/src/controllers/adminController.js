@@ -563,8 +563,13 @@ const getDashboardStats = async (req, res) => {
 
     // Sloturi disponibile
     const availableSlotsQuery = await pool.query(
-      'SELECT COUNT(*) as count FROM time_slots WHERE date >= CURRENT_DATE AND available_spots > 0'
-    );
+  `SELECT COUNT(*) as count FROM time_slots 
+   WHERE date >= CURRENT_DATE 
+   AND id NOT IN (
+     SELECT slot_id FROM bookings 
+     WHERE status = 'confirmed'
+   )`
+);
     const availableSlots = parseInt(availableSlotsQuery.rows[0].count) || 0;
 
     // Programări viitoare

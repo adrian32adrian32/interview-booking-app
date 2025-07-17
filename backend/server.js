@@ -106,3 +106,14 @@ app.listen(PORT, () => {
   console.log(`📅 Started at: ${new Date().toLocaleString('ro-RO')}`);
   console.log('');
 });
+// Test endpoint pentru debug
+app.post('/test-body', (req, res) => {
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Body type:', typeof req.body);
+  res.json({ 
+    body: req.body,
+    bodyType: typeof req.body,
+    isArray: Array.isArray(req.body)
+  });
+});

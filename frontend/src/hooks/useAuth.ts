@@ -115,10 +115,11 @@ export const useAuth = () => {
 
       return { success: true };
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Eroare la înregistrare';
-      toast.error(message);
-      return { success: false, message };
-    }
+  return {
+    success: false,
+    message: error.response?.data?.message || 'Email sau parolă incorectă!'
+  };
+}
   };
 
   const logout = async () => {

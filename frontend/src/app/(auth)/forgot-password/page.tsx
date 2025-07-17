@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, ArrowLeft, Send } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import api from '@/lib/axios';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email invalid'),
@@ -15,9 +15,9 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const { forgotPassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [message, setMessage] = useState<{type: 'error' | 'success' | 'info', text: string} | null>(null);
 
   const {
     register,
@@ -29,41 +29,58 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
     setLoading(true);
+    setMessage(null);
+
     try {
-      const result = await forgotPassword(data.email);
-      if (result.success) {
+      const response = await api.post('/auth/forgot-password', data);
+      
+      if (response.data.success) {
         setSubmitted(true);
+        setMessage({
+          type: 'success',
+          text: 'Instrucțiunile pentru resetarea parolei au fost trimise pe email!'
+        });
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message;
+      
+      // Verifică dacă e eroare specifică de email negăsit
+      if (error.response?.status === 404 || errorMessage?.includes('nu există') || errorMessage?.includes('negăsit')) {
+        setMessage({
+          type: 'error',
+          text: 'Nu există niciun cont înregistrat cu această adresă de email!'
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: errorMessage || 'A apărut o eroare. Te rugăm să încerci din nou.'
+        });
       }
     } finally {
       setLoading(false);
     }
   };
 
-  if (submitted) {
+  if (submitted && message?.type === 'success') {
     return (
-      <>
-        <div className="text-center mb-8">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-            <Mail className="h-6 w-6 text-green-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Verifică-ți email-ul
-          </h1>
-          <p className="text-gray-600">
-            Dacă adresa de email există în sistem, vei primi instrucțiuni de resetare a parolei.
-          </p>
+      <div className="text-center">
+        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+          <CheckCircle className="h-6 w-6 text-green-600" />
         </div>
-
-        <div className="mt-8">
-          <Link
-            href="/login"
-            className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Înapoi la autentificare
-          </Link>
-        </div>
-      </>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Email trimis!
+        </h2>
+        <p className="text-gray-600 mb-8">
+          Verifică-ți inbox-ul pentru instrucțiunile de resetare a parolei.
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Înapoi la autentificare
+        </Link>
+      </div>
     );
   }
 
@@ -74,14 +91,27 @@ export default function ForgotPasswordPage() {
           Ai uitat parola?
         </h1>
         <p className="text-gray-600">
-          Nu-ți face griji! Introdu adresa de email și îți vom trimite instrucțiuni.
+          Introdu adresa de email și îți vom trimite instrucțiuni pentru resetare
         </p>
       </div>
+
+      {message && (
+        <div className={`mb-6 p-4 rounded-lg flex items-start space-x-2 ${
+          message.type === 'error' 
+            ? 'bg-red-50 text-red-800 border border-red-200' 
+            : message.type === 'success'
+            ? 'bg-green-50 text-green-800 border border-green-200'
+            : 'bg-blue-50 text-blue-800 border border-blue-200'
+        }`}>
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <p className="text-sm">{message.text}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            Adresă email
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -91,6 +121,7 @@ export default function ForgotPasswordPage() {
               id="email"
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="nume@example.com"
+              autoComplete="email"
             />
           </div>
           {errors.email && (
@@ -112,10 +143,7 @@ export default function ForgotPasswordPage() {
               Se trimite...
             </span>
           ) : (
-            <>
-              <Send className="h-5 w-5 mr-2" />
-              Trimite instrucțiuni
-            </>
+            'Trimite instrucțiuni'
           )}
         </button>
       </form>
@@ -123,9 +151,9 @@ export default function ForgotPasswordPage() {
       <div className="mt-6 text-center">
         <Link
           href="/login"
-          className="text-sm font-medium text-blue-600 hover:text-blue-800 inline-flex items-center"
+          className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Înapoi la autentificare
         </Link>
       </div>
