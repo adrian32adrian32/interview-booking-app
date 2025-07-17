@@ -6,7 +6,10 @@ module.exports = {
     cwd: '/home/apps/interview-booking-app/frontend',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
-    }
+      PORT: 3002
+    },
+    watch: false,
+    instances: 1,
+    exec_mode: 'fork'
   }]
 };

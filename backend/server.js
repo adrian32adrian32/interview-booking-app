@@ -27,9 +27,14 @@ const PORT = process.env.PORT || 5000;
 // Middleware-uri pentru securitate și logging
 app.use(helmet()); // Securitate headers
 app.use(cors({
-  origin: ['http://94.156.250.138', 'http://localhost:3000', 'http://94.156.250.138:3000'],
+  origin: [
+    'http://localhost:3002',
+    'http://94.156.250.138:3002',
+    'http://94.156.250.138'
+  ],
   credentials: true
-})); // Permite cereri cross-origin
+}));
+// Permite cereri cross-origin
 app.use(compression()); // Compresie răspunsuri
 app.use(morgan('dev')); // Logging în consolă
 app.use(express.json()); // Parsare JSON body
