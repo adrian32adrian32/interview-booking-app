@@ -53,6 +53,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   }
 
+  // Redirecționează admin de la /dashboard la /admin/dashboard
+  if (pathname === '/dashboard' && user?.role === 'admin') {
+    return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+  }
+
   if (isAdminRoute && user?.role !== 'admin') {
     // User non-admin încearcă să acceseze rută admin
     return NextResponse.redirect(new URL('/dashboard', request.url));

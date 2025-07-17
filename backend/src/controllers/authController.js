@@ -45,6 +45,9 @@ const register = async (req, res) => {
     }
 
     const { email, password, firstName, lastName } = req.body;
+    
+    // Generează username automat din email
+    const username = email.split('@')[0].toLowerCase();
 
     // Verifică dacă email-ul există deja
     const existingUser = await pool.query(
@@ -65,15 +68,16 @@ const register = async (req, res) => {
     // Generare token verificare
     const verificationToken = uuidv4();
 
-    // Creare user nou
+    // Creare user nou cu username
     const newUser = await pool.query(
       `INSERT INTO users (
-        email, password_hash, first_name, last_name, 
+        email, username, password_hash, first_name, last_name, 
         role, status, verification_token
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
       RETURNING id, email, first_name, last_name, role`,
       [
-        email.toLowerCase(), 
+        email.toLowerCase(),
+        username,
         hashedPassword, 
         firstName, 
         lastName, 
@@ -86,19 +90,24 @@ const register = async (req, res) => {
     const user = newUser.rows[0];
 
     // Trimite email de verificare
-    await sendEmail({
-      to: email,
-      subject: 'Verifică-ți contul - Interview Booking',
-      html: `
-        <h2>Bine ai venit, ${firstName}!</h2>
-        <p>Îți mulțumim pentru înregistrare. Te rugăm să-ți verifici adresa de email făcând click pe link-ul de mai jos:</p>
-        <a href="${FRONTEND_URL}/verify-email/${verificationToken}" 
-           style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-          Verifică Email
-        </a>
-        <p>Dacă nu ai creat tu acest cont, te rugăm să ignori acest email.</p>
-      `
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Verifică-ți contul - Interview Booking',
+        html: `
+          <h2>Bine ai venit, ${firstName}!</h2>
+          <p>Îți mulțumim pentru înregistrare. Te rugăm să-ți verifici adresa de email făcând click pe link-ul de mai jos:</p>
+          <a href="${FRONTEND_URL}/verify-email/${verificationToken}" 
+             style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Verifică Email
+          </a>
+          <p>Dacă nu ai creat tu acest cont, te rugăm să ignori acest email.</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Eroare la trimiterea email-ului de verificare:', emailError);
+      // Continuă cu înregistrarea chiar dacă email-ul nu se trimite
+    }
 
     // Generare tokens
     const { accessToken, refreshToken } = generateTokens(user);
@@ -250,20 +259,24 @@ const forgotPassword = async (req, res) => {
     );
 
     // Trimite email
-    await sendEmail({
-      to: user.email,
-      subject: 'Resetare parolă - Interview Booking',
-      html: `
-        <h2>Salut ${user.first_name},</h2>
-        <p>Ai solicitat resetarea parolei. Făcând click pe link-ul de mai jos poți să-ți setezi o parolă nouă:</p>
-        <a href="${FRONTEND_URL}/reset-password/${resetToken}" 
-           style="background-color: #FF9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-          Resetează Parola
-        </a>
-        <p>Link-ul este valid pentru următoarele 60 de minute.</p>
-        <p>Dacă nu ai solicitat resetarea parolei, te rugăm să ignori acest email.</p>
-      `
-    });
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Resetare parolă - Interview Booking',
+        html: `
+          <h2>Salut ${user.first_name},</h2>
+          <p>Ai solicitat resetarea parolei. Făcând click pe link-ul de mai jos poți să-ți setezi o parolă nouă:</p>
+          <a href="${FRONTEND_URL}/reset-password/${resetToken}" 
+             style="background-color: #FF9800; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            Resetează Parola
+          </a>
+          <p>Link-ul este valid pentru următoarele 60 de minute.</p>
+          <p>Dacă nu ai solicitat resetarea parolei, te rugăm să ignori acest email.</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Eroare la trimiterea email-ului:', emailError);
+    }
 
     res.json({
       success: true,
@@ -274,7 +287,7 @@ const forgotPassword = async (req, res) => {
     console.error('Eroare la forgot password:', error);
     res.status(500).json({
       success: false,
-      message: 'Eroare la trimiterea email-ului. Te rugăm să încerci din nou.'
+      message: 'Eroare la procesarea cererii. Te rugăm să încerci din nou.'
     });
   }
 };
@@ -434,6 +447,14 @@ const refreshToken = async (req, res) => {
 // Logout
 const logout = async (req, res) => {
   try {
+    // Verifică dacă req.user există
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Utilizator neautentificat!'
+      });
+    }
+
     // Șterge refresh token din DB
     await pool.query(
       'UPDATE users SET refresh_token = NULL WHERE id = $1',

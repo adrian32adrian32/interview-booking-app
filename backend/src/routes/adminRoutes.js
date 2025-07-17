@@ -1,37 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const { protect, adminOnly } = require('../middleware/authMiddleware');
-
-// Verifică dacă adminController există, dacă nu, creează funcții temporare
-let adminController;
-try {
-  adminController = require('../controllers/adminController');
-} catch (error) {
-  console.log('⚠️ AdminController nu există încă, folosesc funcții temporare');
-  adminController = {
-    getDashboardStats: (req, res) => res.json({ success: true, message: 'Dashboard stats - în dezvoltare' }),
-    getAllUsers: (req, res) => res.json({ success: true, message: 'Get all users - în dezvoltare' }),
-    createAdmin: (req, res) => res.json({ success: true, message: 'Create admin - în dezvoltare' }),
-    updateUserStatus: (req, res) => res.json({ success: true, message: 'Update user status - în dezvoltare' }),
-    resetUserPassword: (req, res) => res.json({ success: true, message: 'Reset password - în dezvoltare' }),
-    sendEmailToUsers: (req, res) => res.json({ success: true, message: 'Send email - în dezvoltare' })
-  };
-}
+const {
+  getDashboardStats,
+  getAllUsers,
+  createAdmin,
+  updateUserStatus,
+  updateUserRole,
+  deleteUser,
+  getAllBookings,
+  resetUserPassword,
+  sendEmailToUsers
+} = require('../controllers/adminController');
 
 // Toate rutele admin necesită autentificare și rol de admin
 router.use(protect, adminOnly);
 
 // Dashboard
-router.get('/dashboard/stats', adminController.getDashboardStats);
+router.get('/dashboard/stats', getDashboardStats);
 
 // Gestionare utilizatori
-router.get('/users', adminController.getAllUsers);
-router.post('/users/create-admin', adminController.createAdmin);
-router.patch('/users/:userId/status', adminController.updateUserStatus);
-router.post('/users/:userId/reset-password', adminController.resetUserPassword);
+router.get('/users', getAllUsers);
+router.post('/users/create-admin', createAdmin);
+router.patch('/users/:userId/status', updateUserStatus);
+router.patch('/users/:userId/role', updateUserRole);
+router.delete('/users/:userId', deleteUser);
+router.get('/bookings', getAllBookings);
+router.post('/users/:userId/reset-password', resetUserPassword);
 
 // Email
-router.post('/email/send', adminController.sendEmailToUsers);
+router.post('/email/send', sendEmailToUsers);
 
 // Test route pentru verificare
 router.get('/test', (req, res) => {

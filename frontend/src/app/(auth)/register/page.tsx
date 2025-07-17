@@ -1,175 +1,235 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Eye, EyeOff, UserPlus, Mail, Lock, User } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+
+const registerSchema = z.object({
+  firstName: z.string()
+    .min(2, 'Numele trebuie să aibă minim 2 caractere')
+    .max(50, 'Numele trebuie să aibă maxim 50 caractere')
+    .regex(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/, 'Numele poate conține doar litere, spații și cratime'),
+  lastName: z.string()
+    .min(2, 'Prenumele trebuie să aibă minim 2 caractere')
+    .max(50, 'Prenumele trebuie să aibă maxim 50 caractere')
+    .regex(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/, 'Prenumele poate conține doar litere, spații și cratime'),
+  email: z.string().email('Email invalid'),
+  password: z.string()
+    .min(8, 'Parola trebuie să aibă minim 8 caractere')
+    .regex(/^(?=.*[A-Z])(?=.*\d)/, 'Parola trebuie să conțină cel puțin o literă mare și o cifră'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Parolele nu se potrivesc",
+  path: ["confirmPassword"],
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: ''
-  });
-  const [error, setError] = useState('');
+  const { register: registerUser } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const validateForm = () => {
-    if (formData.password !== formData.confirmPassword) {
-      setError('Parolele nu se potrivesc!');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Parola trebuie să aibă minim 6 caractere!');
-      return false;
-    }
-    return true;
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!validateForm()) return;
-
+  const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
-
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api'}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username,
-          password: formData.password
-        }),
+      const result = await registerUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Salvează token și user în localStorage
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        
-        // Salvează token și în cookie pentru middleware
-        document.cookie = `token=${data.data.token}; path=/; max-age=604800; SameSite=Lax`;
-        
-        // Redirect la dashboard
-        router.push('/dashboard');
-      } else {
-        setError(data.message || 'Eroare la înregistrare');
+      
+      if (!result.success) {
+        // Error handled by useAuth hook
       }
-    } catch {
-      setError('Eroare de conexiune. Încearcă din nou.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12">
-      <div className="w-full max-w-md">
-        <div className="bg-white shadow-lg rounded-lg px-8 pt-6 pb-8 mb-4">
-          <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">
-            Înregistrare
-          </h2>
-          
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="email@example.com"
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                value={formData.username}
-                onChange={(e) => setFormData({...formData, username: e.target.value})}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="username"
-                required
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-                Parolă
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="Minim 6 caractere"
-                required
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="confirmPassword">
-                Confirmă Parola
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="Repetă parola"
-                required
-              />
-            </div>
-
-            <div className="flex items-center justify-between mb-6">
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-                  loading 
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-700 text-white'
-                }`}
-              >
-                {loading ? 'Se creează contul...' : 'Înregistrează-te'}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <p className="text-gray-600">
-                Ai deja cont?{' '}
-                <Link href="/login" className="text-blue-500 hover:text-blue-800 font-semibold">
-                  Autentifică-te
-                </Link>
-              </p>
-            </div>
-          </form>
-        </div>
+    <>
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Creează cont nou
+        </h1>
+        <p className="text-gray-600">
+          Completează formularul pentru a te înregistra
+        </p>
       </div>
-    </main>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+              Nume
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                {...register('firstName')}
+                type="text"
+                id="firstName"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Popescu"
+              />
+            </div>
+            {errors.firstName && (
+              <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+              Prenume
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <input
+                {...register('lastName')}
+                type="text"
+                id="lastName"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Ion"
+              />
+            </div>
+            {errors.lastName && (
+              <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            Email
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              {...register('email')}
+              type="email"
+              id="email"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="nume@example.com"
+            />
+          </div>
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Parolă
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              {...register('password')}
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Minim 8 caractere, o literă mare și o cifră
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            Confirmă parola
+          </label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              {...register('confirmPassword')}
+              type={showConfirmPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showConfirmPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+          {errors.confirmPassword && (
+            <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {loading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Se încarcă...
+            </span>
+          ) : (
+            <>
+              <UserPlus className="h-5 w-5 mr-2" />
+              Înregistrează-te
+            </>
+          )}
+        </button>
+      </form>
+
+      <div className="mt-6 text-center">
+        <p className="text-sm text-gray-600">
+          Ai deja cont?{' '}
+          <Link
+            href="/login"
+            className="font-medium text-blue-600 hover:text-blue-800"
+          >
+            Autentifică-te
+          </Link>
+        </p>
+      </div>
+    </>
   );
 }
