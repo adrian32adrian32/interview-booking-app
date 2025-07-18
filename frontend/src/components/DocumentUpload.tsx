@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { api } from '@/lib/api';
+import api from '@/lib/axios';
 
 interface DocumentUploadProps {
   type: 'id_front' | 'id_back' | 'selfie' | 'other';

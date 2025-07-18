@@ -3,19 +3,23 @@
 import Cookies from 'js-cookie';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/lib/axios'; // Folosim instanța configurată
 import toast from 'react-hot-toast';
 
 interface User {
   id: number;
   email: string;
   username?: string;
+  name?: string;
   role: string;
   first_name?: string;
   last_name?: string;
   firstName?: string;
   lastName?: string;
   emailVerified?: boolean;
+  is_active?: boolean;
+  avatar?: string;
+  phone?: string;
 }
 
 interface AuthContextType {
@@ -49,56 +53,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138:5000';
-
   // Verifică dacă utilizatorul este autentificat
   const checkAuth = async () => {
     try {
+      // Verifică dacă suntem pe client-side
+      if (typeof window === 'undefined') {
+        setLoading(false);
+        return;
+      }
+
       const token = localStorage.getItem('token') || Cookies.get('token');
+      
       if (!token) {
         setLoading(false);
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Folosim instanța api care are deja baseURL configurat
+      const response = await api.get('/auth/me'); // Eliminat /api din față
 
       if (response.data.success) {
-        setUser(response.data.user);
+        setUser(response.data.user || response.data.data);
       } else {
+        // Curăță datele de autentificare
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         Cookies.remove('token');
         Cookies.remove('user');
+        setUser(null);
       }
     } catch (error: any) {
       // Nu afișa eroarea în consolă pentru 401 (utilizator neautentificat)
-      if (error.response?.status !== 401) {
+      if (error.response?.status !== 401 && error.response?.status !== 404) {
         console.error('Auth check error:', error);
       }
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      Cookies.remove('token');
-      Cookies.remove('user');
+      
+      // Pentru 401 sau alte erori, curăță autentificarea
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        Cookies.remove('token');
+        Cookies.remove('user');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkAuth();
+    // Verifică doar pe client-side
+    if (typeof window !== 'undefined') {
+      checkAuth();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   // Login
   const login = async (data: LoginData): Promise<LoginResponse> => {
     try {
-      // IMPORTANT: Folosim endpoint-ul corect din GitHub
-      console.log('🔐 Sending login request to:', `${API_URL}/api/auth/login-no-validation`);
+      console.log('🔐 Sending login request...');
       
-      const response = await axios.post(`${API_URL}/api/auth/login-no-validation`, {
+      // Folosim instanța api configurată
+      const response = await api.post('/auth/login', { // Eliminat /api din față
         email: data.email,
         password: data.password
       });
@@ -106,18 +124,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('📦 Login API response:', response.data);
 
       if (response.data.success) {
-        // Extragem datele din răspuns - structura exactă
-        const userData = response.data.data.user;
-        const token = response.data.data.accessToken;
+        // Extragem datele din răspuns
+        const userData = response.data.user;
+        const token = response.data.token;
         
         console.log('👤 User data:', userData);
         console.log('🎫 Token:', token ? 'exists' : 'missing');
         
         // Salvează token și user în localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
         
-        // IMPORTANT: Salvează și în cookies pentru middleware
+        // Salvează și în cookies pentru middleware
         const cookieOptions = data.rememberMe ? { expires: 7 } : undefined; // 7 zile dacă remember me
         Cookies.set('token', token, cookieOptions);
         Cookies.set('user', JSON.stringify(userData), cookieOptions);
@@ -130,10 +150,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Setează user în state
         setUser(userData);
         
-        // Configurează axios pentru cererile viitoare
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Afișează mesaj de succes
+        toast.success('Autentificare reușită!');
         
-        // Returnează structura corectă pentru pagina de login
+        // Returnează structura pentru pagina de login
         return {
           success: true,
           data: {
@@ -151,64 +171,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('❌ Login error:', error);
       console.error('Error response:', error.response?.data);
       
-      // Dacă endpoint-ul no-validation nu merge, încearcă cel normal
-      if (error.response?.status === 404) {
-        console.log('🔄 Trying standard login endpoint...');
-        
-        try {
-          const fallbackResponse = await axios.post(`${API_URL}/api/auth/login`, {
-            email: data.email,
-            password: data.password
-          });
-          
-          if (fallbackResponse.data.success) {
-            const responseData = fallbackResponse.data.data;
-            const userData = responseData.user;
-            const token = responseData.accessToken || responseData.token;
-            
-            // Salvează datele
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(userData));
-            
-            const cookieOptions = data.rememberMe ? { expires: 7 } : undefined;
-            Cookies.set('token', token, cookieOptions);
-            Cookies.set('user', JSON.stringify(userData), cookieOptions);
-            
-            setUser(userData);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            
-            return {
-              success: true,
-              data: {
-                user: userData,
-                token: token
-              }
-            };
-          }
-        } catch (fallbackError: any) {
-          console.error('❌ Fallback login error:', fallbackError);
-        }
-      }
+      // Afișează mesaj de eroare
+      const errorMessage = error.response?.data?.message || 'Eroare la autentificare';
+      toast.error(errorMessage);
       
       return {
         success: false,
-        message: error.response?.data?.message || 'Eroare la autentificare'
+        message: errorMessage
       };
     }
   };
 
   // Logout
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Apelează endpoint-ul de logout (opțional)
+      await api.post('/auth/logout').catch(() => { // Eliminat /api din față
+        // Ignoră eroarea dacă endpoint-ul nu există
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     // Șterge din localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
     
     // Șterge și din cookies
     Cookies.remove('token');
     Cookies.remove('user');
-    
-    // Șterge din axios headers
-    delete axios.defaults.headers.common['Authorization'];
     
     // Reset state
     setUser(null);
