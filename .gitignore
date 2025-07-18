@@ -35,3 +35,25 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+# Frontend temp files
+frontend/Accept:
+frontend/GET
+frontend/Host:
+frontend/User-Agent:
+
+# Backend compiled files
+backend/dist/
+
+# Logs
+*.log
+logs/
+pm2/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# OS files
+.DS_Store
+Thumbs.db
