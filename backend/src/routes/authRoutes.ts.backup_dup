@@ -176,3 +176,86 @@ router.get('/me', async (req: Request, res: Response) => {
 });
 
 export default router;
+        message: 'Email și parola sunt obligatorii'
+      });
+    }
+
+    // Caută utilizatorul
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email sau parolă incorectă'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verifică parola - încearcă ambele câmpuri pentru compatibilitate
+    const passwordToCheck = user.password_hash || user.password;
+    
+    if (!passwordToCheck) {
+      console.error('No password found for user:', email);
+      return res.status(500).json({
+        success: false,
+        message: 'Eroare de configurare cont'
+      });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, passwordToCheck);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Email sau parolă incorectă'
+      });
+    }
+
+    // Construiește numele complet
+    const fullName = user.name || 
+                    user.username || 
+                    (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : null) ||
+                    user.email.split('@')[0];
+
+    // Generează token JWT
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role,
+        name: fullName
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Trimite răspuns în formatul așteptat de frontend
+    res.json({
+      success: true,
+      message: 'Autentificare reușită',
+      data: {
+        accessToken: token,
+        user: {
+          id: user.id,
+          name: fullName,
+          email: user.email,
+          role: user.role,
+          avatar: user.avatar || null
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Eroare la autentificare'
+    });
+  }
+});
+
+export default router;
