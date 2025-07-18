@@ -59,3 +59,34 @@ pm2/
 Thumbs.db
 backend/dist/
 backend/uploads/**
+
+# Backup files
+*.backup
+*.backup2
+*.old
+
+# Environment files  
+.env
+.env.local
+
+# Build folders
+dist/
+.next/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+
+# PM2
+.pm2/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
