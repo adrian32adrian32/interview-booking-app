@@ -1,0 +1,115 @@
+const { body, validationResult } = require('express-validator');
+// Validatoare pentru înregistrare
+const validateRegister = [
+    body('email')
+        .isEmail()
+        .withMessage('Te rugăm să introduci o adresă de email validă')
+        .normalizeEmail(),
+    body('password')
+        .isLength({ min: 8 })
+        .withMessage('Parola trebuie să aibă minim 8 caractere')
+        .matches(/^(?=.*[A-Z])(?=.*\d)/)
+        .withMessage('Parola trebuie să conțină cel puțin o literă mare și o cifră'),
+    body('firstName')
+        .trim()
+        .notEmpty()
+        .withMessage('Numele este obligatoriu')
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Numele trebuie să aibă între 2 și 50 de caractere')
+        .matches(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/)
+        .withMessage('Numele poate conține doar litere, spații și cratime'),
+    body('lastName')
+        .trim()
+        .notEmpty()
+        .withMessage('Prenumele este obligatoriu')
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Prenumele trebuie să aibă între 2 și 50 de caractere')
+        .matches(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/)
+        .withMessage('Prenumele poate conține doar litere, spații și cratime')
+];
+// Validatoare pentru login
+const validateLogin = [
+    body('email')
+        .isEmail()
+        .withMessage('Te rugăm să introduci o adresă de email validă')
+        .normalizeEmail(),
+    body('password')
+        .notEmpty()
+        .withMessage('Parola este obligatorie')
+];
+// Validator pentru forgot password
+const validateForgotPassword = [
+    body('email')
+        .isEmail()
+        .withMessage('Te rugăm să introduci o adresă de email validă')
+        .normalizeEmail()
+];
+// Validator pentru reset password
+const validateResetPassword = [
+    body('token')
+        .notEmpty()
+        .withMessage('Token-ul de resetare este obligatoriu'),
+    body('newPassword')
+        .isLength({ min: 8 })
+        .withMessage('Parola nouă trebuie să aibă minim 8 caractere')
+        .matches(/^(?=.*[A-Z])(?=.*\d)/)
+        .withMessage('Parola trebuie să conțină cel puțin o literă mare și o cifră')
+];
+// Validator pentru schimbare parolă (user autentificat)
+const validateChangePassword = [
+    body('currentPassword')
+        .notEmpty()
+        .withMessage('Parola curentă este obligatorie'),
+    body('newPassword')
+        .isLength({ min: 8 })
+        .withMessage('Parola nouă trebuie să aibă minim 8 caractere')
+        .matches(/^(?=.*[A-Z])(?=.*\d)/)
+        .withMessage('Parola trebuie să conțină cel puțin o literă mare și o cifră')
+        .custom((value, { req }) => value !== req.body.currentPassword)
+        .withMessage('Parola nouă trebuie să fie diferită de cea curentă')
+];
+// Validator pentru actualizare profil
+const validateUpdateProfile = [
+    body('firstName')
+        .optional()
+        .trim()
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Numele trebuie să aibă între 2 și 50 de caractere')
+        .matches(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/)
+        .withMessage('Numele poate conține doar litere, spații și cratime'),
+    body('lastName')
+        .optional()
+        .trim()
+        .isLength({ min: 2, max: 50 })
+        .withMessage('Prenumele trebuie să aibă între 2 și 50 de caractere')
+        .matches(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/)
+        .withMessage('Prenumele poate conține doar litere, spații și cratime'),
+    body('phone')
+        .optional()
+        .matches(/^(\+4|0)[0-9]{9,10}$/)
+        .withMessage('Număr de telefon invalid')
+];
+// Middleware pentru a procesa erorile de validare
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            message: 'Date invalide',
+            errors: errors.array().map(err => ({
+                field: err.path,
+                message: err.msg
+            }))
+        });
+    }
+    next();
+};
+module.exports = {
+    validateRegister,
+    validateLogin,
+    validateForgotPassword,
+    validateResetPassword,
+    validateChangePassword,
+    validateUpdateProfile,
+    handleValidationErrors
+};

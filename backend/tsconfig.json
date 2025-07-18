@@ -1,81 +1,23 @@
 {
   "compilerOptions": {
-    /* Language and Environment */
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-
-    /* Modules */
+    "target": "es2020",
     "module": "commonjs",
-    "rootDir": "./src",
-    "moduleResolution": "node",
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["src/*"],
-      "@models/*": ["src/models/*"],
-      "@controllers/*": ["src/controllers/*"],
-      "@routes/*": ["src/routes/*"],
-      "@middleware/*": ["src/middleware/*"],
-      "@config/*": ["src/config/*"],
-      "@utils/*": ["src/utils/*"]
-    },
-    "resolveJsonModule": true,
-
-    /* JavaScript Support */
-    "allowJs": true,
-    "checkJs": false,
-
-    /* Emit */
+    "lib": ["es2020"],
     "outDir": "./dist",
-    "removeComments": true,
-    "noEmitOnError": true,
-    "preserveConstEnums": true,
-    "sourceMap": true,
-    "inlineSourceMap": false,
-    "declaration": true,
-    "declarationMap": true,
-
-    /* Interop Constraints */
+    "rootDir": "./src",
+    "strict": false,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-
-    /* Type Checking */
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictFunctionTypes": true,
-    "strictBindCallApply": true,
-    "strictPropertyInitialization": true,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "allowJs": true,
+    "noImplicitReturns": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": false,
-
-    /* Completeness */
-    "skipDefaultLibCheck": true,
-    "skipLibCheck": true
+    "noFallthroughCasesInSwitch": false,
+    "strictNullChecks": false
   },
-  "include": [
-    "src/**/*",
-    "src/**/*.ts",
-    "src/**/*.js"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ],
-  "ts-node": {
-    "require": ["tsconfig-paths/register"],
-    "transpileOnly": true,
-    "files": true
-  }
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

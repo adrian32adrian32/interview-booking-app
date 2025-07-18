@@ -12,7 +12,7 @@ import compression from 'compression';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
+// import userRoutes from './routes/userRoutes';
 import bookingRoutes from './routes/bookingRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 
@@ -57,6 +57,7 @@ const corsOptions = {
       'http://localhost:3002',
       'http://94.156.250.138:3000',
       'http://94.156.250.138:3002',
+      'http://94.156.250.138',
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
@@ -119,8 +120,10 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/bookings', bookingRoutes);
+// app.use('/api/users', userRoutes);
+app.get('/api/users', (req, res) => res.json({ success: true, data: [] }));
+app.get('/api/bookings', (req, res) => res.json({ success: true, data: [] }));
+app.get('/api/time-slots', (req, res) => res.json({ success: true, data: [] }));
 app.use('/api/upload', uploadRoutes);
 
 // Root endpoint

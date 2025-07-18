@@ -474,7 +474,7 @@ export default function DashboardPage() {
         </Link>
         
         <Link
-          href="/admin/statistics"
+          href="/admin/stats"
           className="flex items-center justify-center gap-2 p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
         >
           <Activity className="w-5 h-5 text-orange-600" />
