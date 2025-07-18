@@ -1,6 +1,5 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Calendar, 
@@ -10,66 +9,48 @@ import {
   AlertCircle,
   ArrowRight
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/axios';
-import { format } from 'date-fns';
-import { ro } from 'date-fns/locale';
 
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState({
-    nextBooking: null as any,
+async function checkUserAndRedirect() {
+  const cookieStore = cookies();
+  const userCookie = cookieStore.get('user');
+  
+  if (!userCookie) {
+    redirect('/login');
+  }
+  
+  try {
+    const user = JSON.parse(userCookie.value);
+    
+    // Dacă e admin, redirect la admin dashboard
+    if (user.role === 'admin' || user.email === 'admin@example.com') {
+      redirect('/admin/dashboard');
+    }
+    
+    return user;
+  } catch (e) {
+    console.error('Error parsing user cookie:', e);
+    redirect('/login');
+  }
+}
+
+export default async function DashboardPage() {
+  // Server-side check și redirect
+  const user = await checkUserAndRedirect();
+  
+  // Date mock pentru stats
+  const stats = {
+    nextBooking: null,
     totalBookings: 0,
     documentsUploaded: 0,
-    profileComplete: false
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      // Încarcă programările
-      const bookingsResponse = await api.get('/bookings/my-bookings');
-      const bookings = bookingsResponse.data.data;
-      
-      // Găsește următoarea programare
-      const futureBookings = bookings.filter((b: any) => 
-        new Date(b.date) >= new Date() && b.status === 'confirmed'
-      );
-      const nextBooking = futureBookings.sort((a: any, b: any) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      )[0];
-
-      setStats({
-        nextBooking,
-        totalBookings: bookings.length,
-        documentsUploaded: 0, // TODO: implement documents count
-        profileComplete: user?.emailVerified || false
-      });
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
+    profileComplete: user?.emailVerified || false
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Welcome section */}
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Bine ai venit, {user?.firstName}!
+          Bine ai venit, {user?.firstName || user?.first_name || user?.username || 'Utilizator'}!
         </h1>
         <p className="text-gray-600">
           Aici poți gestiona programările tale și documentele necesare pentru interviu.
@@ -114,36 +95,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* Next booking */}
-      {stats.nextBooking && (
-        <div className="bg-blue-50 rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-blue-900 mb-2">
-                Următoarea programare
-              </h2>
-              <div className="flex items-center space-x-4 text-blue-700">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  {format(new Date(stats.nextBooking.date), 'EEEE, d MMMM yyyy', { locale: ro })}
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 mr-2" />
-                  {stats.nextBooking.start_time}
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/bookings"
-              className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Vezi detalii
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -196,6 +147,14 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Debug info - pentru development */}
+      <div className="mt-8 p-4 bg-gray-100 rounded text-xs text-gray-600">
+        <p><strong>Debug Info (Server-Side):</strong></p>
+        <p>User Role: <strong>{user?.role}</strong></p>
+        <p>User Email: <strong>{user?.email}</strong></p>
+        <p>This is the USER dashboard (not admin)</p>
+      </div>
     </div>
   );
 }

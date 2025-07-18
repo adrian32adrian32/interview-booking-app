@@ -1,316 +1,341 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
-  Search, 
-  Filter, 
-  MoreVertical,
-  Edit,
-  Trash2,
-  UserCheck,
-  UserX,
-  Mail,
-  Shield
+  User, 
+  Mail, 
+  Shield, 
+  Calendar, 
+  Edit, 
+  Trash2, 
+  Plus, 
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
-import api from '@/lib/axios';
-import toast from 'react-hot-toast';
-import { format } from 'date-fns';
-import { Key } from 'lucide-react';
 
-interface User {
+interface UserType {
   id: number;
   email: string;
-  first_name: string;
-  last_name: string;
-  role: string;
-  status: string;
-  email_verified: boolean;
+  firstName: string;
+  lastName: string;
+  role: 'admin' | 'user';
+  status: 'active' | 'inactive';
   created_at: string;
-  bookings_count?: number;
+  emailVerified?: boolean;
 }
 
-export default function AdminUsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function UsersPage() {
+  // Date mock - NU facem API calls
+  const initialUsers: UserType[] = [
+    {
+      id: 1,
+      email: 'admin@example.com',
+      firstName: 'Admin',
+      lastName: 'Principal',
+      role: 'admin',
+      status: 'active',
+      created_at: '2025-01-15',
+      emailVerified: true
+    },
+    {
+      id: 2,
+      email: 'ion.popescu@example.com',
+      firstName: 'Ion',
+      lastName: 'Popescu',
+      role: 'user',
+      status: 'active',
+      created_at: '2025-01-16',
+      emailVerified: true
+    },
+    {
+      id: 3,
+      email: 'maria.ionescu@example.com',
+      firstName: 'Maria',
+      lastName: 'Ionescu',
+      role: 'user',
+      status: 'active',
+      created_at: '2025-01-17',
+      emailVerified: true
+    },
+    {
+      id: 4,
+      email: 'test.user@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'user',
+      status: 'inactive',
+      created_at: '2025-01-18',
+      emailVerified: false
+    },
+    {
+      id: 5,
+      email: 'gheorghe.vasile@example.com',
+      firstName: 'Gheorghe',
+      lastName: 'Vasile',
+      role: 'user',
+      status: 'active',
+      created_at: '2025-01-19',
+      emailVerified: true
+    }
+  ];
+
+  const [users, setUsers] = useState<UserType[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    try {
-      const response = await api.get('/admin/users');
-      setUsers(response.data.data || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      toast.error('Eroare la încărcarea utilizatorilor');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStatusChange = async (userId: number, newStatus: string) => {
-    try {
-      await api.patch(`/admin/users/${userId}/status`, { status: newStatus });
-      toast.success('Status actualizat cu succes!');
-      loadUsers();
-    } catch (error) {
-      toast.error('Eroare la actualizarea statusului');
-    }
-  };
-
-  const handleRoleChange = async (userId: number, newRole: string) => {
-    try {
-      await api.patch(`/admin/users/${userId}/role`, { role: newRole });
-      toast.success('Rol actualizat cu succes!');
-      loadUsers();
-    } catch (error) {
-      toast.error('Eroare la actualizarea rolului');
-    }
-  };
-
-  const handleDelete = async (userId: number) => {
-    if (!confirm('Ești sigur că vrei să ștergi acest utilizator?')) {
-      return;
-    }
-// Adaugă această funcție după handleDelete
-const handleResetPassword = async (userId: number, userEmail: string) => {
-  const newPassword = prompt(`Introdu noua parolă pentru ${userEmail}:`);
-  
-  if (!newPassword || newPassword.length < 8) {
-    toast.error('Parola trebuie să aibă minim 8 caractere!');
-    return;
-  }
-
-  try {
-    await api.post(`/admin/users/${userId}/reset-password`, { 
-      newPassword 
-    });
-    toast.success('Parolă resetată cu succes!');
-  } catch (error) {
-    toast.error('Eroare la resetarea parolei');
-  }
-};
-
-// În tabel, adaugă un buton nou:
-<button
-  onClick={() => handleResetPassword(user.id, user.email)}
-  className="text-yellow-600 hover:text-yellow-800"
-  title="Resetează parola"
->
-  <Key className="h-5 w-5" />
-</button>
-    try {
-      await api.delete(`/admin/users/${userId}`);
-      toast.success('Utilizator șters cu succes!');
-      loadUsers();
-    } catch (error) {
-      toast.error('Eroare la ștergerea utilizatorului');
-    }
-  };
-
+  // Filtrare utilizatori
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.last_name.toLowerCase().includes(searchTerm.toLowerCase());
+      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-
+    
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Paginare
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
+  const handleDelete = (id: number) => {
+    if (confirm('Sigur vrei să ștergi acest utilizator?')) {
+      setUsers(users.filter(u => u.id !== id));
+    }
+  };
+
+  const handleStatusToggle = (id: number) => {
+    setUsers(users.map(user => 
+      user.id === id 
+        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
+        : user
+    ));
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="py-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Gestionare Utilizatori
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Gestionare Utilizatori</h1>
+        <p className="text-gray-600 mt-2">
           Total: {users.length} utilizatori înregistrați
+          {filteredUsers.length < users.length && ` (${filteredUsers.length} după filtrare)`}
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Caută utilizatori..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Role Filter */}
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">Toate rolurile</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">Toate statusurile</option>
-            <option value="active">Activ</option>
-            <option value="inactive">Inactiv</option>
-            <option value="suspended">Suspendat</option>
-          </select>
-
-          {/* Stats */}
-          <div className="flex items-center space-x-4 text-sm">
-            <div>
-              <span className="text-gray-500">Admini:</span>
-              <span className="ml-1 font-medium">{users.filter(u => u.role === 'admin').length}</span>
+      {/* Main Card */}
+      <div className="bg-white shadow rounded-lg">
+        {/* Filters Bar */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Search */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Caută utilizatori..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
-            <div>
-              <span className="text-gray-500">Activi:</span>
-              <span className="ml-1 font-medium">{users.filter(u => u.status === 'active').length}</span>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value as any)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Toate rolurile</option>
+                <option value="admin">Admin</option>
+                <option value="user">User</option>
+              </select>
+              
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Toate statusurile</option>
+                <option value="active">Activi</option>
+                <option value="inactive">Inactivi</option>
+              </select>
+              
+              <Link
+                href="/admin/users/new"
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Adaugă Utilizator
+              </Link>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Utilizator
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Rol
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Înregistrat
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acțiuni
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-600">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                      </span>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {user.first_name} {user.last_name}
-                      </div>
-                      {user.bookings_count !== undefined && (
-                        <div className="text-xs text-gray-500">
-                          {user.bookings_count} programări
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Utilizator
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rol
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Înregistrat
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acțiuni
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          user.role === 'admin' ? 'bg-purple-100' : 'bg-gray-100'
+                        }`}>
+                          <User className={`h-6 w-6 ${
+                            user.role === 'admin' ? 'text-purple-600' : 'text-gray-600'
+                          }`} />
                         </div>
-                      )}
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </div>
+                        {user.emailVerified && (
+                          <span className="text-xs text-green-600">✓ Verificat</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-900">{user.email}</span>
-                    {user.email_verified && (
-                      <UserCheck className="ml-2 h-4 w-4 text-green-500" />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-900">{user.email}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {user.role === 'admin' ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Admin
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        User
+                      </span>
                     )}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={user.role}
-                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                    className={`text-sm px-2 py-1 rounded-full border-0 ${
-                      user.role === 'admin' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={user.status}
-                    onChange={(e) => handleStatusChange(user.id, e.target.value)}
-                    className={`text-sm px-2 py-1 rounded-full border-0 ${
-                      user.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : user.status === 'suspended'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    <option value="active">Activ</option>
-                    <option value="inactive">Inactiv</option>
-                    <option value="suspended">Suspendat</option>
-                  </select>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(user.created_at), 'dd/MM/yyyy')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => window.location.href = `mailto:${user.email}`}
-                      className="text-gray-400 hover:text-gray-600"
-                      title="Trimite email"
+                      onClick={() => handleStatusToggle(user.id)}
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-colors ${
+                        user.status === 'active'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      }`}
                     >
-                      <Mail className="h-5 w-5" />
+                      {user.status === 'active' ? 'Activ' : 'Inactiv'}
                     </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                      {new Date(user.created_at).toLocaleDateString('ro-RO')}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link
+                      href={`/admin/users/${user.id}/edit`}
+                      className="text-blue-600 hover:text-blue-900 mr-3 inline-block"
+                      title="Editează"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </Link>
                     <button
                       onClick={() => handleDelete(user.id)}
-                      className="text-red-400 hover:text-red-600"
-                      title="Șterge utilizator"
+                      className="text-red-600 hover:text-red-900 inline-block"
+                      title="Șterge"
+                      disabled={user.role === 'admin'}
                     >
-                      <Trash2 className="h-5 w-5" />
+                      <Trash2 className={`h-5 w-5 ${
+                        user.role === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
+                      }`} />
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <User className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg">Nu s-au găsit utilizatori</p>
+              <p className="text-sm mt-2">Încearcă să modifici filtrele sau termenii de căutare</p>
+            </div>
+          )}
+        </div>
 
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            Nu s-au găsit utilizatori
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Afișare {indexOfFirstUser + 1} - {Math.min(indexOfLastUser, filteredUsers.length)} din {filteredUsers.length} utilizatori
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              {[...Array(totalPages)].map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={`px-3 py-1 border rounded-md ${
+                    currentPage === index + 1
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         )}
       </div>

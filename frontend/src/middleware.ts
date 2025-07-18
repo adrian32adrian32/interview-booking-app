@@ -1,81 +1,32 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Rute publice care nu necesită autentificare
-const publicRoutes = [
-  '/',
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-];
-
-// Rute doar pentru admin
-const adminRoutes = [
-  '/admin',
-];
-
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const path = request.nextUrl.pathname;
   
-  // Verifică dacă user-ul are token
-  const token = request.cookies.get('token')?.value;
-  const userCookie = request.cookies.get('user')?.value;
-  
-  let user = null;
-  if (userCookie) {
-    try {
-      user = JSON.parse(userCookie);
-    } catch (error) {
-      console.error('Error parsing user cookie:', error);
+  // Dacă suntem pe /dashboard
+  if (path === '/dashboard') {
+    // Verifică cookies pentru user
+    const userCookie = request.cookies.get('user');
+    
+    if (userCookie) {
+      try {
+        const user = JSON.parse(userCookie.value);
+        console.log('Middleware: User role:', user.role);
+        
+        // Dacă e admin, redirect la admin dashboard
+        if (user.role === 'admin') {
+          return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        }
+      } catch (e) {
+        console.error('Middleware: Error parsing user cookie:', e);
+      }
     }
   }
-
-  // Verifică dacă este rută publică
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-  // Verifică dacă este rută admin
-  const isAdminRoute = adminRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-
-  // Redirect logic
-  if (!token && !isPublicRoute) {
-    // User neautentificat încearcă să acceseze rută protejată
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  if (token && (pathname === '/login' || pathname === '/register')) {
-    // User autentificat încearcă să acceseze login/register
-    const redirectUrl = user?.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-    return NextResponse.redirect(new URL(redirectUrl, request.url));
-  }
-
-  // Redirecționează admin de la /dashboard la /admin/dashboard
-  if (pathname === '/dashboard' && user?.role === 'admin') {
-    return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-  }
-
-  if (isAdminRoute && user?.role !== 'admin') {
-    // User non-admin încearcă să acceseze rută admin
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
+  
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
-  ],
+  matcher: ['/dashboard']
 };

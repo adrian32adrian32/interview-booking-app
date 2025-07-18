@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
+const uploadRoutes = require('./src/routes/uploadRoutes');
 
 // Crează aplicația Express
 const app = express();
@@ -55,6 +56,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Test route pentru a verifica că serverul funcționează
 app.get('/', (req, res) => {

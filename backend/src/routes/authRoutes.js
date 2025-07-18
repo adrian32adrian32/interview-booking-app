@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { authenticate } = require('../middleware/auth');
 
 // Test route pentru verificare
 router.get('/test', (req, res) => {
@@ -163,7 +164,7 @@ router.post('/logout',
   protect, 
   safeController(authController.logout, 'logout')
 );
-
+router.get('/me', protect, authController.getMe);
 // Debug route pentru a vedea toate rutele
 router.get('/debug/routes', (req, res) => {
   const routes = [];

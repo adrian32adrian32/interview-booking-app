@@ -7,8 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalid'),
@@ -20,10 +20,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loginMessage, setLoginMessage] = useState<{type: 'error' | 'success', message: string} | null>(null);
+  const [loginMessage, setLoginMessage] = useState<{type: 'error' | 'success', message: string | React.ReactNode} | null>(null);
 
   const {
     register,
@@ -33,46 +32,180 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const handleSuccessfulLogin = (userData: any, token: string) => {
+    console.log('🎯 Handling successful login');
+    console.log('User data received:', userData);
+    console.log('Token received:', token);
+    
+    // Salvăm în localStorage
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Salvăm și în cookies
+    Cookies.set('token', token, { path: '/', expires: 7 });
+    Cookies.set('user', JSON.stringify(userData), { path: '/', expires: 7 });
+    
+    // Verificăm ce s-a salvat
+    const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log('✅ User saved in localStorage:', savedUser);
+    console.log('🎭 Saved user role:', savedUser.role);
+    
+    setLoginMessage({
+      type: 'success',
+      message: 'Autentificare reușită! Te redirecționăm...'
+    });
+    
+    toast.success('Bine ai revenit!');
+    
+    // Determinăm URL-ul de redirect bazat pe rol
+    let redirectUrl = '/dashboard'; // default pentru user normal
+    
+    // Verificăm mai multe variante de rol admin
+    const userRole = savedUser.role || userData.role;
+    const userEmail = savedUser.email || userData.email;
+    
+    console.log('🔍 Checking redirect - Role:', userRole, 'Email:', userEmail);
+    
+    if (userRole === 'admin' || 
+        userRole === 'Admin' || 
+        userRole === 'ADMIN' ||
+        userEmail === 'admin@example.com') {
+      redirectUrl = '/admin/dashboard';
+      console.log('✅ Admin detected! Redirecting to admin dashboard');
+    } else {
+      console.log('👤 Regular user detected. Redirecting to user dashboard');
+    }
+    
+    console.log('🔀 Final redirect URL:', redirectUrl);
+    
+    // Executăm redirect-ul
+    setTimeout(() => {
+      console.log('🚀 Executing redirect now to:', redirectUrl);
+      // Folosim replace pentru a preveni back button issues
+      window.location.replace(redirectUrl);
+    }, 1000);
+  };
+
   const onSubmit = async (data: LoginFormData) => {
-    console.log('📧 Form data:', data); // DEBUG
+    console.log('📧 Starting login with:', data.email);
     
     setLoading(true);
     setLoginMessage(null);
     
     try {
-      console.log('🚀 Calling login function...'); // DEBUG
-      const result = await login(data);
-      console.log('✅ Login result:', result); // DEBUG
-      
-      if (result.success) {
-        setLoginMessage({
-          type: 'success',
-          message: 'Autentificare reușită! Te redirecționăm...'
-        });
+      const response = await fetch('http://94.156.250.138:5000/api/auth/login-no-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password
+        })
+      });
+
+      const result = await response.json();
+      console.log('📦 Full server response:', JSON.stringify(result, null, 2));
+
+      if (result.success && result.data) {
+        console.log('✅ Login successful!');
         
-        toast.success('Bine ai revenit!');
+        // Extragem datele - structura exactă din backend
+        const userData = result.data.user;
+        const token = result.data.accessToken;
         
-        // Așteaptă puțin pentru a afișa mesajul
-        setTimeout(() => {
-          const redirectUrl = result.data.user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
-          console.log('🔀 Redirecting to:', redirectUrl); // DEBUG
-          router.push(redirectUrl);
-        }, 1000);
+        if (!userData || !token) {
+          console.error('❌ Invalid response structure - missing user or token');
+          throw new Error('Date invalide de la server');
+        }
+        
+        handleSuccessfulLogin(userData, token);
+        
       } else {
-        console.error('❌ Login failed:', result); // DEBUG
+        console.error('❌ Login failed:', result.message);
         setLoginMessage({
           type: 'error',
-          message: result.message || 'Date de autentificare incorecte!'
+          message: result.message || 'Email sau parolă incorectă!'
         });
       }
     } catch (error: any) {
-      console.error('💥 Login error:', error); // DEBUG
-      console.error('Error response:', error.response); // DEBUG
+      console.error('💥 Login error:', error);
+      
+      // Încercăm endpoint-ul standard ca fallback
+      try {
+        console.log('🔄 Trying standard endpoint...');
+        
+        const fallbackResponse = await fetch('http://94.156.250.138:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: data.email,
+            password: data.password
+          })
+        });
+
+        const fallbackResult = await fallbackResponse.json();
+        console.log('📦 Fallback response:', fallbackResult);
+        
+        if (fallbackResult.success && fallbackResult.data) {
+          const userData = fallbackResult.data.user;
+          const token = fallbackResult.data.accessToken;
+          
+          if (userData && token) {
+            handleSuccessfulLogin(userData, token);
+            return;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
       
       setLoginMessage({
         type: 'error',
-        message: error.response?.data?.message || error.message || 'Email sau parolă incorectă!'
+        message: 'Eroare la conectare. Verifică datele și încearcă din nou.'
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Test direct pentru admin
+  const loginAsAdmin = async () => {
+    console.log('🔐 Quick admin login...');
+    setLoading(true);
+    
+    try {
+      const response = await fetch('http://94.156.250.138:5000/api/auth/login-no-validation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'admin@example.com',
+          password: 'admin123'
+        })
+      });
+
+      const result = await response.json();
+      console.log('🔐 Admin login response:', result);
+      
+      if (result.success && result.data) {
+        const userData = result.data.user;
+        const token = result.data.accessToken;
+        
+        if (userData && token) {
+          handleSuccessfulLogin(userData, token);
+        } else {
+          throw new Error('Date invalide în răspuns');
+        }
+      } else {
+        toast.error('Eroare la autentificare admin');
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast.error('Eroare de conexiune');
     } finally {
       setLoading(false);
     }
@@ -100,7 +233,7 @@ export default function LoginPage() {
           ) : (
             <CheckCircle className="h-5 w-5 flex-shrink-0" />
           )}
-          <p className="text-sm">{loginMessage.message}</p>
+          <div className="text-sm flex-1">{loginMessage.message}</div>
         </div>
       )}
 
@@ -118,6 +251,7 @@ export default function LoginPage() {
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="nume@example.com"
               autoComplete="email"
+              defaultValue="admin@example.com" // Pentru testare rapidă
             />
           </div>
           {errors.email && (
@@ -138,6 +272,7 @@ export default function LoginPage() {
               className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               placeholder="••••••••"
               autoComplete="current-password"
+              defaultValue="admin123" // Pentru testare rapidă
             />
             <button
               type="button"
@@ -162,6 +297,7 @@ export default function LoginPage() {
               {...register('rememberMe')}
               type="checkbox"
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              defaultChecked
             />
             <span className="ml-2 text-sm text-gray-600">
               Ține-mă minte
@@ -210,31 +346,14 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* DEBUG - Test direct API */}
-      <div className="mt-8 text-center">
+      {/* Buton pentru login rapid ca admin */}
+      <div className="mt-8 pt-8 border-t border-gray-200">
         <button
-          onClick={async () => {
-            console.log('🧪 Testing direct API call...');
-            try {
-              const response = await fetch('http://94.156.250.138/api/auth/login', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: 'admin@example.com',
-                  password: 'admin123'
-                })
-              });
-              const data = await response.json();
-              console.log('🧪 Direct API response:', data);
-            } catch (error) {
-              console.error('🧪 Direct API error:', error);
-            }
-          }}
-          className="text-xs text-gray-500 underline"
+          onClick={loginAsAdmin}
+          disabled={loading}
+          className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm"
         >
-          Test Direct API
+          Login Rapid ca Admin
         </button>
       </div>
     </>

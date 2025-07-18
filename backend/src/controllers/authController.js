@@ -544,6 +544,23 @@ const logout = async (req, res) => {
   }
 };
 
+// Obține datele utilizatorului curent
+const getMe = async (req, res) => {
+  try {
+    // req.user este setat de middleware-ul authenticate
+    res.json({
+      success: true,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Eroare la obținerea datelor utilizatorului'
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -551,5 +568,6 @@ module.exports = {
   resetPassword,
   verifyEmail,
   refreshToken,
-  logout
+  logout,
+  getMe
 };
