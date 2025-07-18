@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { authenticateToken } from '../middleware/auth';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -59,10 +59,10 @@ const upload = multer({
 });
 
 // Middleware de autentificare
-router.use(authenticateToken);
+router.use(authMiddleware);
 
 // POST /api/upload/avatar - Upload avatar utilizator
-router.post('/avatar', upload.single('avatar'), async (req: Request, res: Response) => {
+router.post('/avatar', upload.single('avatar'), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -97,7 +97,7 @@ router.post('/avatar', upload.single('avatar'), async (req: Request, res: Respon
 });
 
 // POST /api/upload/document - Upload documente
-router.post('/document', upload.single('document'), async (req: Request, res: Response) => {
+router.post('/document', upload.single('document'), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -131,7 +131,7 @@ router.post('/document', upload.single('document'), async (req: Request, res: Re
 });
 
 // POST /api/upload/multiple - Upload multiple fișiere
-router.post('/multiple', upload.array('files', 5), async (req: Request, res: Response) => {
+router.post('/multiple', upload.array('files', 5), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       return res.status(400).json({
@@ -165,7 +165,7 @@ router.post('/multiple', upload.array('files', 5), async (req: Request, res: Res
 });
 
 // DELETE /api/upload/:filename - Șterge un fișier
-router.delete('/:filename', async (req: Request, res: Response) => {
+router.delete('/:filename', async (req: AuthRequest, res: Response) => {
   try {
     const { filename } = req.params;
     const userId = req.user?.id;
@@ -197,7 +197,7 @@ router.delete('/:filename', async (req: Request, res: Response) => {
 });
 
 // Middleware pentru gestionarea erorilor multer
-router.use((error: any, req: Request, res: Response, next: any) => {
+router.use((error: any, req: AuthRequest, res: Response, next: any) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({

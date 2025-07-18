@@ -1,10 +1,9 @@
 module.exports = {
   apps: [
     {
-      name: 'interview-backend',
+      name: 'backend-api',
+      script: './dist/server.js',
       cwd: './backend',
-      script: 'npm',
-      args: 'run start',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -13,10 +12,10 @@ module.exports = {
       }
     },
     {
-      name: 'interview-frontend',
-      cwd: './frontend',
+      name: 'frontend-next',
       script: 'npm',
-      args: 'run start',
+      args: 'start',
+      cwd: './frontend',
       instances: 1,
       exec_mode: 'fork',
       env: {

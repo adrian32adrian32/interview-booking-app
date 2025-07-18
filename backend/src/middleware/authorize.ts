@@ -1,5 +1,6 @@
 // backend/src/middleware/authorize.ts
 
+import { AuthRequest } from './auth';
 import { Request, Response, NextFunction } from 'express';
 
 export const authorize = (roles: string[]) => {

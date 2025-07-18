@@ -1,56 +1,42 @@
-// backend/src/middleware/auth.ts
-
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Extinde tipul Request pentru a include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        role: string;
-        name: string;
-      };
-    }
-  }
+export interface AuthRequest extends Request {
+  user?: any;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-2025';
-
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Obține token din header
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Token de autentificare lipsă'
+        message: 'No token provided'
       });
     }
 
-    // Verifică token
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-      if (err) {
-        return res.status(401).json({
-          success: false,
-          message: 'Token invalid sau expirat'
-        });
-      }
-
-      // Adaugă informațiile utilizatorului în request
-      req.user = decoded as any;
-      next();
-    });
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.user = decoded;
+    next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(500).json({
+    res.status(401).json({
       success: false,
-      message: 'Eroare la verificarea autentificării'
+      message: 'Invalid token'
     });
   }
 };
+
+export const authenticateToken = authMiddleware;
+
+export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin only.'
+    });
+  }
+  next();
+};
+
+export default authMiddleware;
