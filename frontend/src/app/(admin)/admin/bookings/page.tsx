@@ -20,7 +20,8 @@ import {
   Download,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Plus
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -223,13 +224,22 @@ export default function BookingsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Gestionare Programări</h1>
-        <button
-          onClick={exportBookings}
-          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-        >
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => router.push('/admin/bookings/new')}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Programare Nouă
+          </button>
+          <button
+            onClick={exportBookings}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -415,6 +425,15 @@ export default function BookingsPage() {
                 ? 'Nu s-au găsit programări conform filtrelor selectate.'
                 : 'Nu există încă programări înregistrate.'}
             </p>
+            {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && dateFilter === 'all' && (
+              <button
+                onClick={() => router.push('/admin/bookings/new')}
+                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adaugă prima programare
+              </button>
+            )}
           </div>
         )}
       </div>

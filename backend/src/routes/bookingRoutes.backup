@@ -12,11 +12,11 @@ import {
 
 const router = Router();
 
-// Rute publice
-router.get('/time-slots/available/:date', getAvailableTimeSlots);
+// Rute publice (pentru clienți să creeze programări și să vadă sloturile disponibile)
 router.post('/', createBooking);
+router.get('/time-slots/available/:date', getAvailableTimeSlots);
 
-// Rute protejate
+// Rute protejate (necesită autentificare)
 router.get('/', authenticateToken, getAllBookings);
 router.get('/date/:date', authenticateToken, getBookingsByDate);
 router.get('/:id', authenticateToken, getBookingById);
