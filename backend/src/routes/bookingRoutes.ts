@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import {
   getAllBookings,
   getBookingById,
@@ -15,10 +15,10 @@ const router = Router();
 router.post('/', createBooking);
 
 // Rute protejate (necesită autentificare)
-router.get('/', authMiddleware, getAllBookings);
-router.get('/:id', authMiddleware, getBookingById);
-router.get('/date/:date', authMiddleware, getBookingsByDate);
-router.put('/:id', authMiddleware, updateBooking);
-router.delete('/:id', authMiddleware, deleteBooking);
+router.get('/', authenticateToken, getAllBookings);
+router.get('/date/:date', authenticateToken, getBookingsByDate);
+router.get('/:id', authenticateToken, getBookingById);
+router.put('/:id', authenticateToken, updateBooking);
+router.delete('/:id', authenticateToken, deleteBooking);
 
 export default router;

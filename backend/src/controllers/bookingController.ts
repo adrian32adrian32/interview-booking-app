@@ -1,12 +1,11 @@
 import { Request, Response } from 'express';
-import pool from '../config/database';
-import { Booking, CreateBookingDto, UpdateBookingDto } from '../models/Booking';
+import { pool } from '../server';
 
 // Obține toate programările
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM bookings ORDER BY date DESC, time_slot ASC'
+      'SELECT * FROM bookings ORDER BY interview_date DESC, interview_time ASC'
     );
     res.json(result.rows);
   } catch (error) {
@@ -39,41 +38,48 @@ export const getBookingById = async (req: Request, res: Response) => {
 export const createBooking = async (req: Request, res: Response) => {
   try {
     const {
-      client_name,
-      client_email,
-      client_phone,
-      interview_type,
-      date,
-      time_slot,
+      clientName,
+      clientEmail,
+      clientPhone,
+      interviewDate,
+      interviewTime,
+      interviewType,
       notes
-    }: CreateBookingDto = req.body;
+    } = req.body;
 
     // Verifică dacă slotul este disponibil
     const slotCheck = await pool.query(
-      'SELECT * FROM bookings WHERE date = $1 AND time_slot = $2 AND status != $3',
-      [date, time_slot, 'cancelled']
+      'SELECT * FROM bookings WHERE interview_date = $1 AND interview_time = $2 AND status != $3',
+      [interviewDate, interviewTime, 'cancelled']
     );
 
     if (slotCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Time slot is already booked' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Acest slot este deja rezervat' 
+      });
     }
 
     // Creează programarea
     const result = await pool.query(
       `INSERT INTO bookings 
-       (client_name, client_email, client_phone, interview_type, date, time_slot, status, notes)
+       (client_name, client_email, client_phone, interview_date, interview_time, interview_type, status, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [client_name, client_email, client_phone, interview_type, date, time_slot, 'pending', notes]
+      [clientName, clientEmail, clientPhone, interviewDate, interviewTime, interviewType, 'pending', notes || null]
     );
 
     res.status(201).json({
-      message: 'Booking created successfully',
-      booking: result.rows[0]
+      success: true,
+      message: 'Programare creată cu succes',
+      data: result.rows[0]
     });
   } catch (error) {
     console.error('Error creating booking:', error);
-    res.status(500).json({ error: 'Failed to create booking' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Eroare la crearea programării' 
+    });
   }
 };
 
@@ -81,13 +87,13 @@ export const createBooking = async (req: Request, res: Response) => {
 export const updateBooking = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status, notes }: UpdateBookingDto = req.body;
+    const { status, notes } = req.body;
 
     const result = await pool.query(
       `UPDATE bookings 
        SET status = COALESCE($1, status), 
            notes = COALESCE($2, notes),
-           updated_at = NOW()
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = $3
        RETURNING *`,
       [status, notes, id]
@@ -134,7 +140,7 @@ export const getBookingsByDate = async (req: Request, res: Response) => {
     const { date } = req.params;
     
     const result = await pool.query(
-      'SELECT * FROM bookings WHERE date = $1 ORDER BY time_slot ASC',
+      'SELECT * FROM bookings WHERE interview_date = $1 ORDER BY interview_time ASC',
       [date]
     );
     
