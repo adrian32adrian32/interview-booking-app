@@ -107,12 +107,12 @@ export default function LoginPage() {
       const result = await response.json();
       console.log('📦 Full server response:', JSON.stringify(result, null, 2));
 
-      if (result.success && result.data) {
+      if (result.success) {
         console.log('✅ Login successful!');
         
         // Extragem datele - structura exactă din backend
-        const userData = result.data.user;
-        const token = result.data.accessToken;
+        const userData = result.user;
+        const token = result.token;
         
         if (!userData || !token) {
           console.error('❌ Invalid response structure - missing user or token');
@@ -150,8 +150,8 @@ export default function LoginPage() {
         console.log('📦 Fallback response:', fallbackResult);
         
         if (fallbackResult.success && fallbackResult.data) {
-          const userData = fallbackResult.data.user;
-          const token = fallbackResult.data.accessToken;
+          const userData = fallbackResult.user;
+          const token = fallbackResult.token;
           
           if (userData && token) {
             handleSuccessfulLogin(userData, token);
@@ -191,9 +191,9 @@ export default function LoginPage() {
       const result = await response.json();
       console.log('🔐 Admin login response:', result);
       
-      if (result.success && result.data) {
-        const userData = result.data.user;
-        const token = result.data.accessToken;
+      if (result.success) {
+        const userData = result.user;
+        const token = result.token;
         
         if (userData && token) {
           handleSuccessfulLogin(userData, token);

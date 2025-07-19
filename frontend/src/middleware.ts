@@ -4,22 +4,34 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   
-  // Dacă suntem pe /dashboard
-  if (path === '/dashboard') {
-    // Verifică cookies pentru user
-    const userCookie = request.cookies.get('user');
+  // Căi care necesită autentificare
+  const protectedPaths = ['/admin', '/dashboard', '/profile', '/bookings'];
+  const isProtectedPath = protectedPaths.some(pp => path.startsWith(pp));
+  
+  if (isProtectedPath) {
+    // Verifică token în cookies (nu în localStorage care nu e accesibil aici)
+    const token = request.cookies.get('token');
     
-    if (userCookie) {
+    if (!token) {
+      // Redirect la login cu return URL
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('from', path);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // Verifică rolul pentru admin
+    if (path.startsWith('/admin')) {
       try {
-        const user = JSON.parse(userCookie.value);
-        console.log('Middleware: User role:', user.role);
-        
-        // Dacă e admin, redirect la admin dashboard
-        if (user.role === 'admin') {
-          return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        const user = request.cookies.get('user');
+        if (user) {
+          const userData = JSON.parse(user.value);
+          if (userData.role !== 'admin') {
+            return NextResponse.redirect(new URL('/dashboard', request.url));
+          }
         }
       } catch (e) {
-        console.error('Middleware: Error parsing user cookie:', e);
+        // Invalid user data
+        return NextResponse.redirect(new URL('/login', request.url));
       }
     }
   }
@@ -28,5 +40,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard']
+  matcher: [
+    '/admin/:path*',
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/bookings/:path*'
+  ]
 };

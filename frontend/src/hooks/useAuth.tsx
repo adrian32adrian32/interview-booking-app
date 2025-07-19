@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Verifică doar pe client-side
     if (typeof window !== 'undefined') {
-      checkAuth();
+      // checkAuth();
     } else {
       setLoading(false);
     }

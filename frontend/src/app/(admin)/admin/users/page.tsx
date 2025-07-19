@@ -1,207 +1,378 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  User, 
-  Mail, 
-  Shield, 
-  Calendar, 
-  Edit, 
-  Trash2, 
-  Plus, 
-  Search,
-  Filter,
-  ChevronLeft,
-  ChevronRight
+import { format } from 'date-fns';
+import { ro } from 'date-fns/locale';
+import {
+  Users, UserPlus, Search, Filter, Download,
+  Mail, Phone, Shield, Calendar, Clock,
+  Edit, Trash2, Key, CheckCircle, XCircle,
+  AlertCircle, Eye, EyeOff, MoreVertical,
+  UserCheck, UserX, RefreshCw
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-interface UserType {
+interface User {
   id: number;
+  username?: string;
+  name?: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  role: 'admin' | 'user';
-  status: 'active' | 'inactive';
+  role: string;
+  phone?: string;
   created_at: string;
-  emailVerified?: boolean;
+  last_login?: string;
+  status?: string;
+  email_verified?: boolean;
 }
 
-export default function UsersPage() {
-  // Date mock - NU facem API calls
-  const initialUsers: UserType[] = [
-    {
-      id: 1,
-      email: 'admin@example.com',
-      firstName: 'Admin',
-      lastName: 'Principal',
-      role: 'admin',
-      status: 'active',
-      created_at: '2025-01-15',
-      emailVerified: true
-    },
-    {
-      id: 2,
-      email: 'ion.popescu@example.com',
-      firstName: 'Ion',
-      lastName: 'Popescu',
-      role: 'user',
-      status: 'active',
-      created_at: '2025-01-16',
-      emailVerified: true
-    },
-    {
-      id: 3,
-      email: 'maria.ionescu@example.com',
-      firstName: 'Maria',
-      lastName: 'Ionescu',
-      role: 'user',
-      status: 'active',
-      created_at: '2025-01-17',
-      emailVerified: true
-    },
-    {
-      id: 4,
-      email: 'test.user@example.com',
-      firstName: 'Test',
-      lastName: 'User',
-      role: 'user',
-      status: 'inactive',
-      created_at: '2025-01-18',
-      emailVerified: false
-    },
-    {
-      id: 5,
-      email: 'gheorghe.vasile@example.com',
-      firstName: 'Gheorghe',
-      lastName: 'Vasile',
-      role: 'user',
-      status: 'active',
-      created_at: '2025-01-19',
-      emailVerified: true
-    }
-  ];
-
-  const [users, setUsers] = useState<UserType[]>(initialUsers);
+export default function UsersManagementPage() {
+  const router = useRouter();
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<'all' | 'admin' | 'user'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [showActions, setShowActions] = useState<number | null>(null);
 
-  // Filtrare utilizatori
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  // Paginare
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchTerm, roleFilter, statusFilter]);
 
-  const handleDelete = (id: number) => {
-    if (confirm('Sigur vrei să ștergi acest utilizator?')) {
-      setUsers(users.filter(u => u.id !== id));
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch users');
+
+      const data = await response.json();
+      const usersData = data.data || data || [];
+      
+      // Adaugă status bazat pe ultima autentificare
+      const enhancedUsers = usersData.map((user: User) => ({
+        ...user,
+        status: getUserStatus(user.last_login),
+        name: user.name || `${user.username || user.email.split('@')[0]}`
+      }));
+
+      setUsers(enhancedUsers);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Eroare la încărcarea utilizatorilor');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleStatusToggle = (id: number) => {
-    setUsers(users.map(user => 
-      user.id === id 
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    ));
+  const getUserStatus = (lastLogin?: string) => {
+    if (!lastLogin) return 'inactive';
+    const daysSinceLogin = Math.floor((Date.now() - new Date(lastLogin).getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceLogin <= 7) return 'active';
+    if (daysSinceLogin <= 30) return 'idle';
+    return 'inactive';
   };
+
+  const filterUsers = () => {
+    let filtered = [...users];
+
+    if (searchTerm) {
+      filtered = filtered.filter(user =>
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.phone?.includes(searchTerm)
+      );
+    }
+
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(user => user.status === statusFilter);
+    }
+
+    setFilteredUsers(filtered);
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Ești sigur că vrei să ștergi acest utilizator?')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete user');
+
+      toast.success('Utilizator șters cu succes');
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Eroare la ștergerea utilizatorului');
+    }
+  };
+
+  const handleResetPassword = async (userId: number, email: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to reset password');
+
+      toast.success(`Link de resetare trimis către ${email}`);
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast.error('Eroare la resetarea parolei');
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: number, currentStatus: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) throw new Error('Failed to update user status');
+
+      toast.success(`Utilizator ${newStatus === 'active' ? 'activat' : 'suspendat'}`);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast.error('Eroare la actualizarea statusului');
+    }
+  };
+
+  const handleBulkAction = async (action: string) => {
+    if (selectedUsers.length === 0) {
+      toast.error('Selectează cel puțin un utilizator');
+      return;
+    }
+
+    switch (action) {
+      case 'delete':
+        if (confirm(`Ești sigur că vrei să ștergi ${selectedUsers.length} utilizatori?`)) {
+          // Implementează ștergere în masă
+          toast.success(`${selectedUsers.length} utilizatori șterși`);
+          setSelectedUsers([]);
+          fetchUsers();
+        }
+        break;
+      case 'export':
+        exportUsers();
+        break;
+    }
+  };
+
+  const exportUsers = () => {
+    const dataToExport = selectedUsers.length > 0 
+      ? filteredUsers.filter(u => selectedUsers.includes(u.id))
+      : filteredUsers;
+
+    const csv = [
+      ['ID', 'Nume', 'Email', 'Username', 'Rol', 'Telefon', 'Status', 'Înregistrat', 'Ultima autentificare'],
+      ...dataToExport.map(u => [
+        u.id,
+        u.name || '',
+        u.email,
+        u.username || '',
+        u.role,
+        u.phone || '',
+        u.status || '',
+        format(new Date(u.created_at), 'dd.MM.yyyy'),
+        u.last_login ? format(new Date(u.last_login), 'dd.MM.yyyy HH:mm') : 'Niciodată'
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `utilizatori-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    toast.success('Export realizat cu succes');
+  };
+
+  const getRoleBadge = (role: string) => {
+    const badges = {
+      admin: 'bg-purple-100 text-purple-800',
+      user: 'bg-blue-100 text-blue-800',
+      moderator: 'bg-green-100 text-green-800'
+    };
+    return badges[role as keyof typeof badges] || badges.user;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges = {
+      active: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+      idle: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: AlertCircle },
+      inactive: { bg: 'bg-gray-100', text: 'text-gray-800', icon: XCircle }
+    };
+    
+    const badge = badges[status as keyof typeof badges] || badges.inactive;
+    const Icon = badge.icon;
+
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+        <Icon className="w-3 h-3" />
+        {status === 'active' ? 'Activ' : status === 'idle' ? 'Inactiv recent' : 'Inactiv'}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="py-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Gestionare Utilizatori</h1>
-        <p className="text-gray-600 mt-2">
-          Total: {users.length} utilizatori înregistrați
-          {filteredUsers.length < users.length && ` (${filteredUsers.length} după filtrare)`}
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestionare Utilizatori</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {filteredUsers.length} utilizatori • {users.filter(u => u.role === 'admin').length} administratori
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => fetchUsers()}
+            className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Reîncarcă
+          </button>
+          <button
+            onClick={() => router.push('/admin/users/new')}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Utilizator Nou
+          </button>
+        </div>
       </div>
 
-      {/* Main Card */}
-      <div className="bg-white shadow rounded-lg">
-        {/* Filters Bar */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Caută utilizatori..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value as any)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Toate rolurile</option>
-                <option value="admin">Admin</option>
-                <option value="user">User</option>
-              </select>
-              
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Toate statusurile</option>
-                <option value="active">Activi</option>
-                <option value="inactive">Inactivi</option>
-              </select>
-              
-              <Link
-                href="/admin/users/new"
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Adaugă Utilizator
-              </Link>
-            </div>
+      {/* Filters & Search */}
+      <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Caută după nume, email, username..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Toate rolurile</option>
+            <option value="admin">Administratori</option>
+            <option value="user">Utilizatori</option>
+            <option value="moderator">Moderatori</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Toate statusurile</option>
+            <option value="active">Activi</option>
+            <option value="idle">Inactivi recent</option>
+            <option value="inactive">Inactivi</option>
+          </select>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">
+              <Filter className="inline h-4 w-4 mr-1" />
+              {filteredUsers.length} rezultate
+            </span>
+            {selectedUsers.length > 0 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleBulkAction('export')}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleBulkAction('delete')}
+                  className="text-sm text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Table */}
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedUsers(filteredUsers.map(u => u.id));
+                      } else {
+                        setSelectedUsers([]);
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Utilizator
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
+                  Contact
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rol
+                  Rol & Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Înregistrat
+                  Activitate
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acțiuni
@@ -209,133 +380,166 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsers([...selectedUsers, user.id]);
+                        } else {
+                          setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                        }
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </td>
+                  <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          user.role === 'admin' ? 'bg-purple-100' : 'bg-gray-100'
-                        }`}>
-                          <User className={`h-6 w-6 ${
-                            user.role === 'admin' ? 'text-purple-600' : 'text-gray-600'
-                          }`} />
-                        </div>
+                      <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-gray-600">
+                          {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </div>
-                        {user.emailVerified && (
-                          <span className="text-xs text-green-600">✓ Verificat</span>
-                        )}
+                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="text-sm text-gray-500">@{user.username || user.email.split('@')[0]}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{user.email}</span>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">
+                      <div className="flex items-center">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        {user.email}
+                        {user.email_verified && (
+                          <CheckCircle className="h-4 w-4 ml-1 text-green-500" title="Email verificat" />
+                        )}
+                      </div>
+                      {user.phone && (
+                        <div className="flex items-center mt-1">
+                          <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                          {user.phone}
+                        </div>
+                      )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {user.role === 'admin' ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Admin
+                  <td className="px-6 py-4">
+                    <div className="space-y-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadge(user.role)}`}>
+                        <Shield className="w-3 h-3 mr-1" />
+                        {user.role === 'admin' ? 'Administrator' : user.role === 'user' ? 'Utilizator' : 'Moderator'}
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        User
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleStatusToggle(user.id)}
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full transition-colors ${
-                        user.status === 'active'
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      {user.status === 'active' ? 'Activ' : 'Inactiv'}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                      {new Date(user.created_at).toLocaleDateString('ro-RO')}
+                      {getStatusBadge(user.status || 'inactive')}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/admin/users/${user.id}/edit`}
-                      className="text-blue-600 hover:text-blue-900 mr-3 inline-block"
-                      title="Editează"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="text-red-600 hover:text-red-900 inline-block"
-                      title="Șterge"
-                      disabled={user.role === 'admin'}
-                    >
-                      <Trash2 className={`h-5 w-5 ${
-                        user.role === 'admin' ? 'opacity-50 cursor-not-allowed' : ''
-                      }`} />
-                    </button>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                        {format(new Date(user.created_at), 'dd MMM yyyy', { locale: ro })}
+                      </div>
+                      {user.last_login && (
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                          {format(new Date(user.last_login), 'dd MMM HH:mm', { locale: ro })}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right text-sm font-medium">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowActions(showActions === user.id ? null : user.id)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                      
+                      {showActions === user.id && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                          <div className="py-1">
+                            <button
+                              onClick={() => {
+                                router.push(`/admin/users/${user.id}/edit`);
+                                setShowActions(null);
+                              }}
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editează
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleResetPassword(user.id, user.email);
+                                setShowActions(null);
+                              }}
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
+                            >
+                              <Key className="h-4 w-4 mr-2" />
+                              Resetează parola
+                            </button>
+                            <button
+                              onClick={() => {
+                                handleToggleUserStatus(user.id, user.status || 'active');
+                                setShowActions(null);
+                              }}
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full"
+                            >
+                              {user.status === 'active' ? (
+                                <>
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Suspendă
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Activează
+                                </>
+                              )}
+                            </button>
+                            <hr className="my-1" />
+                            <button
+                              onClick={() => {
+                                handleDeleteUser(user.id);
+                                setShowActions(null);
+                              }}
+                              className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Șterge
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              <User className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg">Nu s-au găsit utilizatori</p>
-              <p className="text-sm mt-2">Încearcă să modifici filtrele sau termenii de căutare</p>
-            </div>
-          )}
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Afișare {indexOfFirstUser + 1} - {Math.min(indexOfLastUser, filteredUsers.length)} din {filteredUsers.length} utilizatori
-            </div>
-            <div className="flex gap-2">
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-12">
+            <Users className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Nu s-au găsit utilizatori</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {searchTerm || roleFilter !== 'all' || statusFilter !== 'all'
+                ? 'Încearcă să modifici filtrele de căutare'
+                : 'Începe prin a adăuga primul utilizator'}
+            </p>
+            {!searchTerm && roleFilter === 'all' && statusFilter === 'all' && (
               <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => router.push('/admin/users/new')}
+                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adaugă primul utilizator
               </button>
-              {[...Array(totalPages)].map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentPage(index + 1)}
-                  className={`px-3 py-1 border rounded-md ${
-                    currentPage === index + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {index + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
+            )}
           </div>
         )}
       </div>

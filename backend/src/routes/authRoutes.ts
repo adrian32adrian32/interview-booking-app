@@ -1,177 +1,111 @@
-// backend/src/routes/authRoutes.ts
-
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../server';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
 
-// Secret pentru JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-2025';
-
-// POST /api/auth/login
+// Login
 router.post('/login', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Validare
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email și parola sunt obligatorii'
-      });
-    }
-
-    // Caută utilizatorul
+    // Query simplificat
     const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
+      `SELECT id, username, email, password_hash, role, 
+       COALESCE(CONCAT(first_name, ' ', last_name), username) as name
+       FROM users 
+       WHERE email = $1 OR username = $1`,
       [email]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email sau parolă incorectă'
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
       });
     }
 
     const user = result.rows[0];
+    const validPassword = await bcrypt.compare(password, user.password_hash);
 
-    // Verifică parola - încearcă ambele câmpuri pentru compatibilitate
-    const passwordToCheck = user.password_hash || user.password;
-    
-    if (!passwordToCheck) {
-      console.error('No password found for user:', email);
-      return res.status(500).json({
-        success: false,
-        message: 'Eroare de configurare cont'
+    if (!validPassword) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid credentials' 
       });
     }
 
-    const isValidPassword = await bcrypt.compare(password, passwordToCheck);
-
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email sau parolă incorectă'
-      });
-    }
-
-    // Verifică dacă utilizatorul este activ (dacă câmpul există)
-    if (user.is_active !== undefined && !user.is_active) {
-      return res.status(403).json({
-        success: false,
-        message: 'Contul tău a fost dezactivat'
-      });
-    }
-
-    // Construiește numele complet
-    const fullName = user.name || 
-                    user.username || 
-                    (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : null) ||
-                    user.email.split('@')[0];
-
-    // Generează token JWT
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        email: user.email, 
-        role: user.role,
-        name: fullName
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
+    // Update last login
+    await pool.query(
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
     );
 
-    // Trimite răspuns în formatul așteptat de frontend
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
     res.json({
       success: true,
-      message: 'Autentificare reușită',
-      data: {
-        accessToken: token,
-        user: {
-          id: user.id,
-          name: fullName,
-          email: user.email,
-          role: user.role,
-          avatar: user.avatar || null
-        }
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
     });
-
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Eroare la autentificare'
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
     });
   }
 });
 
-// POST /api/auth/logout
-router.post('/logout', (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'Delogare reușită'
-  });
-});
-
-// GET /api/auth/me
-router.get('/me', async (req: Request, res: Response) => {
+// Register
+router.post('/register', async (req: Request, res: Response) => {
   try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Token lipsă'
-      });
-    }
+    const { email, password, firstName, lastName } = req.body;
 
-    const token = authHeader.substring(7);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Verifică token
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-
-    // Obține date actualizate despre utilizator
     const result = await pool.query(
-      `SELECT id, username, first_name, last_name, email, role, phone, avatar 
-       FROM users 
-       WHERE id = $1`,
-      [decoded.id]
+      `INSERT INTO users (email, password_hash, first_name, last_name, role)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, email, role`,
+      [email, hashedPassword, firstName, lastName, 'user']
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilizator negăsit'
+    const token = jwt.sign(
+      { id: result.rows[0].id, email: result.rows[0].email, role: result.rows[0].role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: result.rows[0]
+    });
+  } catch (error: any) {
+    if (error.code === '23505') {
+      res.status(400).json({ 
+        success: false, 
+        message: 'Email already exists' 
+      });
+    } else {
+      console.error('Register error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error' 
       });
     }
-
-    const user = result.rows[0];
-    const fullName = user.first_name && user.last_name 
-      ? `${user.first_name} ${user.last_name}`.trim()
-      : user.username || user.email.split('@')[0];
-
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: fullName,
-        email: user.email,
-        role: user.role,
-        phone: user.phone,
-        avatar: user.avatar
-      }
-    });
-
-  } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(401).json({
-      success: false,
-      message: 'Token invalid'
-    });
   }
 });
 
