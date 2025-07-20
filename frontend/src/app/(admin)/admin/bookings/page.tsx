@@ -59,7 +59,7 @@ export default function BookingsPage() {
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://94.156.250.138:5000/api/bookings', {
+      const response = await fetch('/api/bookings', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -126,7 +126,7 @@ export default function BookingsPage() {
   const updateBookingStatus = async (id: number, status: 'confirmed' | 'cancelled') => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://94.156.250.138:5000/api/bookings/${id}`, {
+      const response = await fetch(`/api/bookings/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -150,7 +150,7 @@ export default function BookingsPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://94.156.250.138:5000/api/bookings/${id}`, {
+      const response = await fetch(`/api/bookings/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

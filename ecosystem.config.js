@@ -11,12 +11,13 @@ module.exports = {
       }
     },
     {
-      name: 'interview-frontend', 
+      name: 'interview-frontend',
       cwd: './frontend',
-      script: './node_modules/.bin/next',
-      args: 'start -p 3001',
+      script: 'npm',
+      args: 'start',  // Changed from 'run dev' to 'start'
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        PORT: 3001
       }
     }
   ]

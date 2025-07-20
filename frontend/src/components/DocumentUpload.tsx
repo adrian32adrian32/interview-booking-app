@@ -1,173 +1,160 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import api from '@/lib/axios';
+import { useState } from 'react';
+import { Upload, FileText, X } from 'lucide-react';
+import axios from '@/lib/axios';
+import toast from 'react-hot-toast';
 
 interface DocumentUploadProps {
-  type: 'id_front' | 'id_back' | 'selfie' | 'other';
-  label: string;
-  onUploadSuccess?: () => void;
+  bookingId?: number;
+  userId?: number;
+  onUploadComplete?: () => void;
+  documents?: any[];
+  canDelete?: boolean;
 }
 
-export default function DocumentUpload({ type, label, onUploadSuccess }: DocumentUploadProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [preview, setPreview] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function DocumentUpload({ 
+  bookingId, 
+  userId, 
+  onUploadComplete,
+  documents = [],
+  canDelete = true
+}: DocumentUploadProps) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadedDocs, setUploadedDocs] = useState(documents);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Reset mesaje anterioare
-    setError('');
-    setSuccess('');
-
-    // Validare dimensiune
+    const file = files[0];
+    
+    // Verifică dimensiunea fișierului
     if (file.size > 10 * 1024 * 1024) {
-      setError('Fișierul nu poate depăși 10MB!');
+      toast.error('Fișierul este prea mare. Maxim 10MB.');
       return;
     }
 
-    // Validare tip
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(file.type)) {
-      setError('Doar fișiere JPG, PNG sau PDF sunt permise!');
-      return;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'document');
+    
+    // Adaugă bookingId sau userId dacă există
+    if (bookingId) {
+      formData.append('bookingId', bookingId.toString());
     }
-
-    // Preview pentru imagini
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPreview(null);
+    if (userId) {
+      formData.append('userId', userId.toString());
     }
-
-    // Upload automat
-    uploadFile(file);
-  };
-
-  const uploadFile = async (file: File) => {
-    setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
-      const response = await api.user.uploadDocument(file, type);
-
-      if (response.success) {
-        setSuccess('Document încărcat cu succes!');
-        setUploadedFile(file.name);
-        
-        // NU face reload, doar actualizează lista dacă există callback
-        if (onUploadSuccess) {
-          onUploadSuccess();
+      setUploading(true);
+      console.log('Uploading file:', file.name);
+      
+      const response = await axios.post('/upload/document', formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
+          console.log('Upload progress:', percentCompleted + '%');
         }
+      });
+      
+      console.log('Upload response:', response.data);
+      
+      if (response.data.success) {
+        toast.success('Document încărcat cu succes');
+        setUploadedDocs([...uploadedDocs, response.data.document]);
         
-        // După 3 secunde, resetează pentru următorul upload
-        setTimeout(() => {
-          setSuccess('');
-          setPreview(null);
-          // Reset file input
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        }, 3000);
-        
-      } else {
-        setError(response.message || 'Eroare la încărcare!');
+        if (onUploadComplete) {
+          onUploadComplete();
+        }
       }
-    } catch (err) {
-      setError('Eroare de conexiune. Încearcă din nou!');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Eroare la încărcarea documentului');
+      }
     } finally {
-      setLoading(false);
+      setUploading(false);
+      // Reset input
+      e.target.value = '';
     }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
+  const handleDelete = async (docId: number) => {
+    if (!confirm('Sigur doriți să ștergeți acest document?')) return;
+    
+    try {
+      await axios.delete(`/upload/document/${docId}`);
+      setUploadedDocs(uploadedDocs.filter(doc => doc.id !== docId));
+      toast.success('Document șters');
+      
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+    } catch (error) {
+      toast.error('Eroare la ștergerea documentului');
+    }
   };
 
   return (
-    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-2">{label}</h3>
-      
-      {error && (
-        <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded text-sm">
-          {error}
-        </div>
-      )}
-      
-      {success && (
-        <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded text-sm">
-          {success}
-        </div>
-      )}
-
-      {preview && (
-        <div className="mb-4">
-          <img 
-            src={preview} 
-            alt="Preview" 
-            className="max-w-xs mx-auto rounded-lg shadow-md"
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Documente
+        </label>
+        
+        <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors bg-gray-50 hover:bg-gray-100">
+          <div className="flex flex-col items-center">
+            <Upload className={`w-6 h-6 ${uploading ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />
+            <span className="mt-1 text-sm text-gray-500">
+              {uploading ? 'Se încarcă...' : 'Click pentru upload (max 10MB)'}
+            </span>
+            <span className="text-xs text-gray-400 mt-1">
+              PDF, JPG, JPEG, PNG
+            </span>
+          </div>
+          <input
+            type="file"
+            className="hidden"
+            onChange={handleFileUpload}
+            accept=".pdf,.jpg,.jpeg,.png"
+            disabled={uploading}
           />
-        </div>
-      )}
-      
-      {uploadedFile && !success && (
-        <div className="mb-4 text-center">
-          <p className="text-sm text-gray-600">
-            Fișier încărcat: <span className="font-medium">{uploadedFile}</span>
-          </p>
-        </div>
-      )}
-
-      <div className="text-center">
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileSelect}
-          accept="image/jpeg,image/jpg,image/png,application/pdf"
-          className="hidden"
-        />
-        
-        <button
-          onClick={triggerFileInput}
-          disabled={loading}
-          className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium ${
-            loading
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          {loading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Se încarcă...
-            </>
-          ) : (
-            <>
-              <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              {uploadedFile ? 'Alege alt fișier' : 'Alege fișier'}
-            </>
-          )}
-        </button>
-        
-        <p className="mt-2 text-xs text-gray-500">
-          JPG, PNG sau PDF până la 10MB
-        </p>
+        </label>
       </div>
+
+      {uploadedDocs.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">Documente încărcate:</p>
+          {uploadedDocs.map((doc) => (
+            <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+              <div className="flex items-center flex-1">
+                <FileText className="w-4 h-4 text-gray-500 mr-2" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm truncate">{doc.original_name || doc.filename}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')}
+                  </p>
+                </div>
+              </div>
+              {canDelete && (
+                <button
+                  onClick={() => handleDelete(doc.id)}
+                  className="text-red-600 hover:text-red-800 ml-2 p-1"
+                  title="Șterge document"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

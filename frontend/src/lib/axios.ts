@@ -1,35 +1,53 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-// Pentru producție, folosește URL relativ pentru a folosi proxy-ul din Next.js
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
 const api = axios.create({
-  baseURL: API_URL ? `${API_URL}/api` : '/api', // Folosește /api relativ când nu e setat API_URL
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
   timeout: 30000,
-  transitional: {
-    silentJSONParsing: true,
-    forcedJSONParsing: true,
-    clarifyTimeoutError: false,
-  }
 });
 
-// Request interceptor - add auth token
+// Stack trace pentru debugging
+function getStackTrace() {
+  const stack = new Error().stack || '';
+  const lines = stack.split('\n');
+  // Găsește prima linie care nu e din axios sau React
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.includes('.tsx') || line.includes('.ts')) {
+      if (!line.includes('node_modules') && !line.includes('axios')) {
+        return line.trim();
+      }
+    }
+  }
+  return 'Unknown source';
+}
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get token from localStorage
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Log pentru debugging în development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
+    // Debug pentru /api/users request
+    if (config.url?.includes('/users') || config.url?.includes('/bookings')) {
+      const source = getStackTrace();
+      console.log(`📍 Request source:`, source);
+      console.log(`🔗 Full URL:`, config.url);
+      console.log(`📌 BaseURL:`, config.baseURL);
+    }
+
+    // Detectează problema
+    if (config.url && config.url.startsWith('/api/')) {
+      console.warn('⚠️ PROBLEM: URL already contains /api/', {
+        url: config.url,
+        baseURL: config.baseURL,
+        source: getStackTrace()
+      });
     }
 
     return config;
@@ -39,48 +57,25 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - handle errors
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-
-    // Log error în development
     if (process.env.NODE_ENV === 'development') {
-      const isAuthMeError = error.config?.url?.includes('auth/me') && error.response?.status === 404;
-      if (!isAuthMeError) {
-        console.error('API Error:', error.response?.data || error.message);
-      }
+      console.error('API Error:', error.response?.data || error.message);
     }
 
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      // Clear auth data
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-
-      // Redirect to login DOAR dacă:
-      // 1. Suntem în browser
-      // 2. NU suntem deja pe o pagină publică
-      // 3. NU e o eroare de auth/me (care poate fi normală la început)
-      if (typeof window !== 'undefined') {
+    if (error.response?.status === 401) {
+      const url = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/');
+      const isUploadEndpoint = url.includes('/upload/');
+      
+      if (!isAuthEndpoint && !isUploadEndpoint && typeof window !== 'undefined') {
         const currentPath = window.location.pathname;
-        const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/'];
+        const publicPaths = ['/login', '/register', '/forgot-password', '/'];
         const isPublicPath = publicPaths.some(path => currentPath.startsWith(path));
-        const isAuthMeRequest = error.config?.url?.includes('/auth/me');
         
-        // Redirect doar dacă NU suntem pe o pagină publică și NU e request de auth/me
-        if (!isPublicPath && !isAuthMeRequest) {
-          console.log('🔐 Redirecting to login due to 401 error');
-          window.location.href = '/login';
-        } else if (isAuthMeRequest) {
-          console.log('ℹ️ Auth check failed, but not redirecting from auth/me request');
+        if (!isPublicPath) {
+          console.warn('401 error - would redirect to login but checking first...');
         }
       }
     }

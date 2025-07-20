@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, User, Mail, Phone, Video, MapPin, FileText } from 'lucide-react';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 interface TimeSlot {
   time: string;
@@ -65,7 +65,7 @@ const BookingForm: React.FC = () => {
   const fetchAvailableSlots = async (date: string) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/time-slots/available/${date}`);
+      const response = await api.get(`/api/time-slots/available/${date}`);
       
       const slots = response.data.allSlots.map((time: string) => ({
         time,
@@ -99,7 +99,7 @@ const BookingForm: React.FC = () => {
       setLoading(true);
       setError('');
       
-      const response = await axios.post('/api/bookings', formData);
+      const response = await api.post('/bookings', formData);
       
       if (response.data.success || response.status === 201) {
         setSuccess(true);

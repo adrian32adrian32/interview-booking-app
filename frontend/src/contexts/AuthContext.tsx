@@ -1,13 +1,18 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '@/lib/axios';
+import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
+import toast from 'react-hot-toast';
 
 interface User {
   id: number;
-  name: string;
   email: string;
-  role: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  role: 'admin' | 'user';
 }
 
 interface AuthContextType {
@@ -20,30 +25,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const checkAuth = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || Cookies.get('token');
       if (!token) {
         setLoading(false);
         return;
       }
 
-      const response = await axios.get('/api/auth/me', {
+      const response = await api.get('/auth/me', {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      if (response.data.success && response.data.user) {
-        setUser(response.data.user);
+      if (response.data.success) {
+        setUser(response.data.user || response.data.data);
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        Cookies.remove('token');
+        Cookies.remove('user');
+        setUser(null);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        Cookies.remove('token');
+        Cookies.remove('user');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -55,30 +72,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        setUser(response.data.user);
+        const userData = response.data.user;
+        const token = response.data.token;
         
-        // Set default authorization header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        Cookies.set('token', token, { expires: 7 });
+        Cookies.set('user', JSON.stringify(userData), { expires: 7 });
+        
+        setUser(userData);
+        toast.success('Autentificare reușită!');
+        
+        if (userData.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Eroare la autentificare';
+      toast.error(message);
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await axios.post('/api/auth/logout');
+      await api.post('/auth/logout').catch(() => {});
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
     }
+    
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    Cookies.remove('token');
+    Cookies.remove('user');
+    setUser(null);
+    router.push('/login');
+    toast.success('Ai fost deconectat cu succes!');
   };
 
   return (
@@ -88,10 +123,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

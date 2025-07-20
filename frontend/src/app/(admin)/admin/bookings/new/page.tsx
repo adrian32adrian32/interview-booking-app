@@ -66,7 +66,7 @@ export default function NewBookingPage() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/bookings/time-slots/available/${formData.interview_date}`,
+        `/api/bookings/time-slots/available/${formData.interview_date}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -139,7 +139,7 @@ export default function NewBookingPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings`, {
+      const response = await fetch(`/api/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

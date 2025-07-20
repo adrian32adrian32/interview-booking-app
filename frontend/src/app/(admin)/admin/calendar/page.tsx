@@ -66,7 +66,7 @@ export default function CalendarPage() {
   const fetchBookings = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
+      const response = await fetch('/api/bookings', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

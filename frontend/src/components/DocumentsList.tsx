@@ -24,7 +24,7 @@ export default function DocumentsList() {
 
   const loadDocuments = async () => {
     try {
-      const response = await api.user.getDocuments();
+      const response = await api.get("/upload/documents");
       if (response.success) {
         setDocuments(response.data);
       } else {
@@ -67,7 +67,7 @@ export default function DocumentsList() {
     if (!confirm('Ești sigur că vrei să ștergi acest document?')) return;
 
     try {
-      const response = await api.user.deleteDocument(id);
+      const response = await api.delete(`/upload/document/${id}`);
       if (response.success) {
         setDocuments(documents.filter(doc => doc.id !== id));
       } else {
@@ -81,7 +81,7 @@ export default function DocumentsList() {
   const handleDownload = async (id: string, fileName: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api'}/users/documents/${id}/download`, {
+      const response = await fetch(`${"/api" || 'http://94.156.250.138/api'}/users/documents/${id}/download`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../server';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-2024';
 
 // Login
 router.post('/login', async (req: Request, res: Response) => {

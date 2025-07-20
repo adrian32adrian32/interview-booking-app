@@ -48,7 +48,7 @@ export default function BookingCalendar() {
 
   const checkExistingBooking = async () => {
     try {
-      const response = await api.bookings.getMyBookings();
+      const response = await api.get("/bookings/my-bookings");
       if (response.success && response.data.length > 0) {
         const activeBooking = response.data.find((b: ExistingBooking) => b.status === 'confirmed');
         if (activeBooking) {
@@ -66,7 +66,7 @@ export default function BookingCalendar() {
     setSlots([]);
     
     try {
-      const response = await api.bookings.getAvailableSlots(selectedDate);
+      const response = await api.get(`/bookings/available-slots?date=${selectedDate}`);
       if (response.success) {
         setSlots(response.data.slots || []);
         if (!response.data.slots || response.data.slots.length === 0) {
@@ -99,7 +99,7 @@ export default function BookingCalendar() {
   time: slots.find(s => s.id === selectedSlot)?.time || ''
 };
       
-      const response = await api.bookings.createBooking(bookingData);
+      const response = await api.post("/bookings/create", bookingData);
 
       if (response.success) {
         setSuccess('🎉 Programare creată cu succes! Te așteptăm!');
@@ -125,7 +125,7 @@ export default function BookingCalendar() {
 
     setLoading(true);
     try {
-      const response = await api.bookings.cancelBooking(bookingId);
+      const response = await api.put(`/bookings/${bookingId}/cancel`);
       if (response.success) {
         setSuccess('Programare anulată cu succes!');
         setExistingBooking(null);

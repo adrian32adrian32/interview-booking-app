@@ -93,7 +93,7 @@ export default function LoginPage() {
     setLoginMessage(null);
     
     try {
-      const response = await fetch('http://94.156.250.138:5000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export default function LoginPage() {
       try {
         console.log('🔄 Trying standard endpoint...');
         
-        const fallbackResponse = await fetch('http://94.156.250.138:5000/api/auth/login', {
+        const fallbackResponse = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -177,7 +177,7 @@ export default function LoginPage() {
     setLoading(true);
     
     try {
-      const response = await fetch('http://94.156.250.138:5000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

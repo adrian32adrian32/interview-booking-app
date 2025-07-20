@@ -4,48 +4,34 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { ArrowLeft, FileText, Eye, Download, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Mail, Phone, User, X, FileText, Eye, Download, Trash2 } from 'lucide-react';
+import DocumentUpload from '@/components/DocumentUpload';
 
-export default function EditUserPage() {
+export default function EditBookingPage() {
   const params = useParams();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [booking, setBooking] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewDoc, setPreviewDoc] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    first_name: '',
-    last_name: '',
-    phone: '',
-    role: 'user',
-    password: ''
-  });
 
   useEffect(() => {
-    fetchUser();
+    fetchBooking();
     fetchDocuments();
   }, []);
 
-  const fetchUser = async () => {
+  const fetchBooking = async () => {
     try {
-      const res = await axios.get(`/api/users/${params.id}`);
-      if (res.data.success) {
-        setUser(res.data.data);
-        setFormData({
-          username: res.data.data.username || '',
-          email: res.data.data.email || '',
-          first_name: res.data.data.first_name || '',
-          last_name: res.data.data.last_name || '',
-          phone: res.data.data.phone || '',
-          role: res.data.data.role || 'user',
-          password: ''
-        });
+      const res = await axios.get('/bookings');
+      const bookingData = res.data.find((b: any) => b.id === parseInt(params.id as string));
+      if (bookingData) {
+        setBooking(bookingData);
+      } else {
+        toast.error('Programare negăsită');
+        router.push('/admin/bookings');
       }
     } catch (error) {
-      toast.error('Eroare la încărcarea utilizatorului');
-      router.push('/admin/users');
+      toast.error('Eroare la încărcarea datelor');
     } finally {
       setLoading(false);
     }
@@ -53,7 +39,7 @@ export default function EditUserPage() {
 
   const fetchDocuments = async () => {
     try {
-      const res = await axios.get(`/api/users/${params.id}/documents`);
+      const res = await axios.get(`/api/bookings/${params.id}/documents`);
       setDocuments(res.data.documents || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -63,11 +49,21 @@ export default function EditUserPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.put(`/api/users/${params.id}`, formData);
-      toast.success('Utilizator actualizat cu succes');
-      router.push('/admin/users');
+      await axios.put(`/api/bookings/${params.id}`, booking);
+      toast.success('Programare actualizată cu succes');
+      router.push('/admin/bookings');
     } catch (error) {
-      toast.error('Eroare la actualizarea utilizatorului');
+      toast.error('Eroare la actualizarea programării');
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await axios.put(`/api/bookings/${params.id}`, { status: newStatus });
+      setBooking({ ...booking, status: newStatus });
+      toast.success('Status actualizat');
+    } catch (error) {
+      toast.error('Eroare la actualizarea statusului');
     }
   };
 
@@ -84,25 +80,37 @@ export default function EditUserPage() {
     }
   };
 
+  const handleDeleteDocument = async (docId: number) => {
+    if (!confirm('Sigur doriți să ștergeți acest document?')) return;
+    
+    try {
+      await axios.delete(`/api/upload/document/${docId}`);
+      toast.success('Document șters');
+      fetchDocuments();
+    } catch (error) {
+      toast.error('Eroare la ștergerea documentului');
+    }
+  };
+
   if (loading) return <div>Se încarcă...</div>;
-  if (!user) return null;
+  if (!booking) return null;
 
   return (
     <div className="py-6">
       <button
-        onClick={() => router.push('/admin/users')}
+        onClick={() => router.push('/admin/bookings')}
         className="mb-4 flex items-center text-blue-600 hover:text-blue-800"
       >
         <ArrowLeft className="w-4 h-4 mr-1" />
-        Înapoi la utilizatori
+        Înapoi la programări
       </button>
 
       <h1 className="text-3xl font-bold text-gray-900 mb-6">
-        Editează Utilizator: {user.name || user.username}
+        Editează Programare #{booking.id}
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Date Utilizator */}
+        {/* Formular Date Utilizator */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Date Utilizator</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -110,66 +118,57 @@ export default function EditUserPage() {
               <label className="block text-sm font-medium text-gray-700">Email</label>
               <input
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300"
-                required
+                value={booking.client_email}
+                disabled
+                className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Nume</label>
-                <input
-                  type="text"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Prenume</label>
-                <input
-                  type="text"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Nume</label>
+              <input
+                type="text"
+                value={booking.client_name || ''}
+                onChange={(e) => setBooking({...booking, client_name: e.target.value})}
+                className="mt-1 block w-full rounded-md border-gray-300"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Telefon</label>
               <input
                 type="text"
-                value={formData.phone}
-                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                value={booking.client_phone || ''}
+                onChange={(e) => setBooking({...booking, client_phone: e.target.value})}
                 className="mt-1 block w-full rounded-md border-gray-300"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Rol</label>
+            <div className="pt-4 border-t">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
               <select
-                value={formData.role}
-                onChange={(e) => setFormData({...formData, role: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300"
+                value={booking.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="w-full rounded-md border-gray-300"
               >
-                <option value="user">Utilizator</option>
-                <option value="admin">Administrator</option>
+                <option value="pending">În așteptare</option>
+                <option value="confirmed">Confirmat</option>
+                <option value="cancelled">Anulat</option>
+                <option value="completed">Finalizat</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Parolă nouă (lasă gol pentru a nu schimba)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notițe
               </label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                className="mt-1 block w-full rounded-md border-gray-300"
-                placeholder="••••••••"
+              <textarea
+                value={booking.notes || ''}
+                onChange={(e) => setBooking({...booking, notes: e.target.value})}
+                rows={4}
+                className="w-full rounded-md border-gray-300"
               />
             </div>
 
@@ -184,16 +183,18 @@ export default function EditUserPage() {
 
         {/* Documente */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Documente</h2>
+          <h2 className="text-xl font-semibold mb-4">Documente Client</h2>
           
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
-            <p className="text-gray-500">Documentele pot fi încărcate doar din programări</p>
-          </div>
+          <DocumentUpload
+            bookingId={booking.id}
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+          />
 
-          {/* Lista documente */}
-          {documents.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-2">Documente încărcate:</p>
+          {/* Lista documente existente cu preview */}
+          {documents.length > 0 && (
+            <div className="mt-6 space-y-2">
+              <p className="text-sm text-gray-600 mb-2">Documente existente:</p>
               {documents.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between p-3 border rounded bg-gray-50">
                   <div className="flex items-center flex-1">
@@ -202,11 +203,6 @@ export default function EditUserPage() {
                       <p className="text-sm font-medium">{doc.original_name || doc.filename}</p>
                       <p className="text-xs text-gray-500">
                         {new Date(doc.uploaded_at).toLocaleDateString()}
-                        {doc.booking_id && (
-                          <span className="ml-2 text-blue-600">
-                            (Programare #{doc.booking_id})
-                          </span>
-                        )}
                       </p>
                     </div>
                   </div>
@@ -225,12 +221,17 @@ export default function EditUserPage() {
                     >
                       <Download className="w-4 h-4" />
                     </button>
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id)}
+                      className="text-red-600 hover:text-red-800"
+                      title="Șterge"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">Nu există documente încărcate</p>
           )}
         </div>
       </div>

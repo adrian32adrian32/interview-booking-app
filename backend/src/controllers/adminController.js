@@ -248,8 +248,8 @@ const deleteUser = async (req, res) => {
     const { userId } = req.params;
 
     // Verifică dacă utilizatorul are programări active
-    // const bookingsCheck = await pool.query(
-      'SELECT COUNT(*) as count FROM client_bookings WHERE client_email = $1 AND status = $2',
+    const bookingsCheck = await pool.query(
+      'SELECT COUNT(*) as count FROM bookings WHERE user_id = $1 AND status = $2',
       [userId, 'confirmed']
     );
 
@@ -305,7 +305,7 @@ const getAllBookings = async (req, res) => {
         ts.date,
         ts.start_time,
         ts.end_time
-      FROM client_bookings b
+      FROM bookings b
       JOIN users u ON b.user_id = u.id
       JOIN time_slots ts ON b.slot_id = ts.id
       WHERE 1=1
@@ -544,13 +544,13 @@ const getDashboardStats = async (req, res) => {
     const activeUsers = parseInt(activeUsersQuery.rows[0].count) || 0;
 
     // Total programări
-    const totalBookingsQuery = await pool.query('SELECT COUNT(*) as count FROM client_bookings');
+    const totalBookingsQuery = await pool.query('SELECT COUNT(*) as count FROM bookings');
     const totalBookings = parseInt(totalBookingsQuery.rows[0].count) || 0;
 
     // Programări de azi - folosește JOIN pentru a obține date din time_slots
     const todayBookingsQuery = await pool.query(
       `SELECT COUNT(*) as count 
-       FROM client_bookings b
+       FROM bookings b
        JOIN time_slots ts ON b.slot_id = ts.id
        WHERE ts.date = CURRENT_DATE AND b.status = $1`,
       ['confirmed']
@@ -566,7 +566,7 @@ const getDashboardStats = async (req, res) => {
   `SELECT COUNT(*) as count FROM time_slots 
    WHERE date >= CURRENT_DATE 
    AND id NOT IN (
-     SELECT slot_id FROM client_bookings 
+     SELECT slot_id FROM bookings 
      WHERE status = 'confirmed'
    )`
 );
@@ -575,7 +575,7 @@ const getDashboardStats = async (req, res) => {
     // Programări viitoare
     const upcomingBookingsQuery = await pool.query(
       `SELECT COUNT(*) as count 
-       FROM client_bookings b
+       FROM bookings b
        JOIN time_slots ts ON b.slot_id = ts.id
        WHERE ts.date >= CURRENT_DATE AND b.status = $1`,
       ['confirmed']
