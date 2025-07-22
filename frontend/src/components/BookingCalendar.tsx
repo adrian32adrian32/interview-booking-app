@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import api from '@/lib/axios';
 
 interface Slot {
   id: string;
@@ -13,9 +12,12 @@ interface Slot {
 
 interface ExistingBooking {
   id: string;
-  date: string;
-  time: string;
+  client_name: string;
+  client_email: string;
+  interview_date: string;
+  interview_time: string;
   status: string;
+  interview_type: string;
 }
 
 export default function BookingCalendar() {
@@ -48,14 +50,33 @@ export default function BookingCalendar() {
 
   const checkExistingBooking = async () => {
     try {
-      const response = await api.get("/bookings/my-bookings");
-      if (response.success && response.data.length > 0) {
-        const activeBooking = response.data.find((b: ExistingBooking) => b.status === 'confirmed');
-        if (activeBooking) {
-          setExistingBooking(activeBooking);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/my-bookings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('My bookings data:', data);
+        
+        if (data.success && data.bookings && data.bookings.length > 0) {
+          // Găsește o programare activă (pending sau confirmed)
+          const activeBooking = data.bookings.find((b: ExistingBooking) => 
+            b.status === 'confirmed' || b.status === 'pending'
+          );
+          
+          if (activeBooking) {
+            setExistingBooking(activeBooking);
+          }
         }
       }
-    } catch {
+    } catch (error) {
+      console.error('Error checking existing booking:', error);
       // Ignore errors
     }
   };
@@ -66,16 +87,36 @@ export default function BookingCalendar() {
     setSlots([]);
     
     try {
-      const response = await api.get(`/bookings/available-slots?date=${selectedDate}`);
-      if (response.success) {
-        setSlots(response.data.slots || []);
-        if (!response.data.slots || response.data.slots.length === 0) {
-          setError('Nu există sloturi disponibile pentru această dată.');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Nu ești autentificat');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/available-slots?date=${selectedDate}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Available slots data:', data);
+        
+        if (data.success) {
+          setSlots(data.data?.slots || data.slots || []);
+          if (!data.data?.slots?.length && !data.slots?.length) {
+            setError('Nu există sloturi disponibile pentru această dată.');
+          }
+        } else {
+          setError(data.message || 'Nu s-au putut încărca sloturile disponibile');
         }
       } else {
         setError('Nu s-au putut încărca sloturile disponibile');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error loading slots:', error);
       setError('Eroare de conexiune. Verifică dacă ai selectat o dată validă.');
     } finally {
       setLoadingSlots(false);
@@ -93,27 +134,59 @@ export default function BookingCalendar() {
     setSuccess('');
 
     try {
-     const bookingData = {
-  slotId: selectedSlot,
-  date: selectedDate,
-  time: slots.find(s => s.id === selectedSlot)?.time || ''
-};
-      
-      const response = await api.post("/bookings/create", bookingData);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Nu ești autentificat');
+        return;
+      }
 
-      if (response.success) {
+      // Găsește slotul selectat pentru a obține ora
+      const selectedSlotData = slots.find(s => s.id === selectedSlot);
+      if (!selectedSlotData) {
+        setError('Slot invalid selectat');
+        return;
+      }
+
+      const bookingData = {
+        slotId: selectedSlot,
+        date: selectedDate,
+        time: selectedSlotData.time,
+        interview_type: 'online' // sau poți adăuga o opțiune pentru user să aleagă
+      };
+
+      console.log('Sending booking data:', bookingData);
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/create`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      const data = await response.json();
+      console.log('Booking response:', data);
+
+      if (response.ok && data.success) {
         setSuccess('🎉 Programare creată cu succes! Te așteptăm!');
         setSelectedSlot(null);
         setSelectedDate('');
-        checkExistingBooking();
         
+        // Reîncarcă booking-urile existente
+        setTimeout(() => {
+          checkExistingBooking();
+        }, 1000);
+        
+        // Refresh după 3 secunde
         setTimeout(() => {
           window.location.reload();
         }, 3000);
       } else {
-        setError(response.message || 'Eroare la creare programare');
+        setError(data.message || data.error || 'Eroare la creare programare');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error creating booking:', error);
       setError('Eroare de conexiune. Te rog încearcă din nou.');
     } finally {
       setLoading(false);
@@ -125,14 +198,35 @@ export default function BookingCalendar() {
 
     setLoading(true);
     try {
-      const response = await api.put(`/bookings/${bookingId}/cancel`);
-      if (response.success) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Nu ești autentificat');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/${bookingId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setSuccess('Programare anulată cu succes!');
         setExistingBooking(null);
+        
+        // Reîncarcă calendarul
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       } else {
-        setError('Eroare la anulare');
+        setError(data.message || 'Eroare la anulare');
       }
-    } catch {
+    } catch (error) {
+      console.error('Error canceling booking:', error);
       setError('Eroare de conexiune');
     } finally {
       setLoading(false);
@@ -149,13 +243,17 @@ export default function BookingCalendar() {
   };
 
   const formatDateForDisplay = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('ro-RO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateStr + 'T00:00:00');
+      return date.toLocaleDateString('ro-RO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
   };
 
   const navigateMonth = (direction: number) => {
@@ -241,10 +339,27 @@ export default function BookingCalendar() {
             </h3>
             <div className="bg-white rounded-lg p-4 mt-4 mb-6">
               <p className="text-gray-700 mb-2">
-                <span className="font-semibold">📅 Data:</span> {formatDateForDisplay(existingBooking.date)}
+                <span className="font-semibold">📅 Data:</span> {formatDateForDisplay(existingBooking.interview_date)}
+              </p>
+              <p className="text-gray-700 mb-2">
+                <span className="font-semibold">🕐 Ora:</span> {existingBooking.interview_time}
+              </p>
+              <p className="text-gray-700 mb-2">
+                <span className="font-semibold">📍 Tip:</span> {existingBooking.interview_type === 'online' ? 'Online' : 'În persoană'}
               </p>
               <p className="text-gray-700">
-                <span className="font-semibold">🕐 Ora:</span> {existingBooking.time}
+                <span className="font-semibold">📊 Status:</span>{' '}
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  existingBooking.status === 'confirmed' 
+                    ? 'bg-green-100 text-green-800' 
+                    : existingBooking.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {existingBooking.status === 'confirmed' ? 'Confirmat' : 
+                   existingBooking.status === 'pending' ? 'În așteptare' : 
+                   existingBooking.status}
+                </span>
               </p>
             </div>
             <button
@@ -281,6 +396,7 @@ export default function BookingCalendar() {
             <button
               onClick={() => navigateMonth(-1)}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Luna anterioară"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -294,6 +410,7 @@ export default function BookingCalendar() {
             <button
               onClick={() => navigateMonth(1)}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Luna următoare"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -341,6 +458,7 @@ export default function BookingCalendar() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p>Nu există sloturi disponibile pentru această dată.</p>
+                  <p className="text-sm mt-2">Încearcă să selectezi o altă dată.</p>
                 </div>
               ) : (
                 <>

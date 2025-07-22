@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { User, Mail, Phone, Calendar, Edit, Trash2, Power, PowerOff, FileText } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Edit, Trash2, Power, PowerOff, FileText, Briefcase } from 'lucide-react';
 
 interface UserData {
   id: number;
@@ -16,6 +16,8 @@ interface UserData {
   status: string;
   created_at: string;
   last_login: string;
+  bookings_count?: number;
+  documents_count?: number;
 }
 
 export default function UsersList() {
@@ -124,7 +126,7 @@ export default function UsersList() {
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Înregistrat
+                Programări
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acțiuni
@@ -181,10 +183,18 @@ export default function UsersList() {
                     {user.status === 'active' ? 'Activ' : 'Inactiv'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                    {new Date(user.created_at).toLocaleDateString('ro-RO')}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm">
+                    <div className="flex items-center text-gray-900">
+                      <Briefcase className="h-4 w-4 mr-1 text-gray-400" />
+                      <span>{user.bookings_count || 0} programări</span>
+                    </div>
+                    {user.documents_count > 0 && (
+                      <div className="flex items-center text-blue-600 mt-1">
+                        <FileText className="h-4 w-4 mr-1" />
+                        <span>{user.documents_count} documente</span>
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

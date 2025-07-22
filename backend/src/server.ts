@@ -10,9 +10,11 @@ import compression from 'compression';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import rateLimit from 'express-rate-limit';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
+import bookingRoutes from './routes/bookingRoutes';
 import statisticsRoutes from './routes/statisticsRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import userRoutes from './routes/userRoutes';
@@ -23,6 +25,7 @@ dotenv.config();
 
 // Initialize Express app
 const app: Express = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 export const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-2024';
 
@@ -46,6 +49,71 @@ pool.connect((err, client, release) => {
   }
 });
 
+// ===== RATE LIMITERS CONFIGURATION =====
+const createRateLimiter = (windowMs: number, max: number, message: string, skipSuccessfulRequests: boolean = false) => {
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
+  return rateLimit({
+    windowMs,
+    max: isDevelopment ? max * 100 : max,
+    message,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests,
+    validate: false,
+    keyGenerator: (req: Request) => {
+      const forwarded = req.headers['x-forwarded-for'] as string;
+      const ip = forwarded 
+        ? forwarded.split(',')[0].trim()
+        : req.socket.remoteAddress || req.ip || 'unknown';
+      
+      if (ip.includes('::ffff:')) {
+        return ip.replace('::ffff:', '');
+      }
+      
+      return ip;
+    },
+    handler: (req: Request, res: Response) => {
+      res.status(429).json({
+        success: false,
+        message: message
+      });
+    }
+  });
+};
+
+// Rate limiters
+const loginLimiter = createRateLimiter(
+  15 * 60 * 1000,
+  5,
+  'Prea multe încercări de autentificare. Vă rugăm încercați din nou peste 15 minute.'
+);
+
+const registerLimiter = createRateLimiter(
+  60 * 60 * 1000,
+  3,
+  'Prea multe conturi create de la această adresă IP. Încercați din nou peste o oră.',
+  true
+);
+
+const apiLimiter = createRateLimiter(
+  15 * 60 * 1000,
+  100,
+  'Prea multe request-uri de la această adresă IP.'
+);
+
+const forgotPasswordLimiter = createRateLimiter(
+  60 * 60 * 1000,
+  3,
+  'Prea multe cereri de resetare parolă. Încercați din nou peste o oră.'
+);
+
+const uploadLimiter = createRateLimiter(
+  60 * 60 * 1000,
+  20,
+  'Ați atins limita de upload-uri. Încercați din nou peste o oră.'
+);
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -58,21 +126,19 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5000',
-      'http://localhost:3002',
       'http://94.156.250.138:3000',
       'http://94.156.250.138:5000',
-      'http://94.156.250.138:3002',
       'http://94.156.250.138',
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
       console.log('⚠️ CORS blocked origin:', origin);
-      callback(null, true); // Allow anyway for development
+      callback(null, true);
     }
   },
   credentials: true,
@@ -119,9 +185,9 @@ const uploadStorage = multer.diskStorage({
   }
 });
 
-const uploadMiddleware = multer({
+export const uploadMiddleware = multer({
   storage: uploadStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|pdf/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -134,7 +200,7 @@ const uploadMiddleware = multer({
   }
 });
 
-// Static files for uploads - UPDATED with proper CORS headers
+// Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   setHeaders: (res, path) => {
     res.set('Access-Control-Allow-Origin', '*');
@@ -153,339 +219,39 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
+// Apply general API rate limiting to all /api routes
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/', apiLimiter);
+}
+
+// ===== MOUNT ROUTES WITH PROPER ORDER =====
+// Auth routes with specific rate limiters
+app.use('/api/auth', (req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === 'production') {
+    if (req.path === '/login' && req.method === 'POST') {
+      loginLimiter(req, res, next);
+    } else if (req.path === '/register' && req.method === 'POST') {
+      registerLimiter(req, res, next);
+    } else if (req.path === '/forgot-password' && req.method === 'POST') {
+      forgotPasswordLimiter(req, res, next);
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
+}, authRoutes);
+
+// Mount all route modules
+app.use('/api/bookings', bookingRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/time-slots', slotRoutes);
 
-// Time slots endpoint
-app.get('/api/time-slots', (req: Request, res: Response) => {
-  res.json({
-    slots: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'],
-    workingHours: {
-      start: '09:00',
-      end: '18:00',
-      interval: 30
-    }
-  });
-});
-
-// Get available time slots
-app.get('/api/bookings/time-slots/available/:date', async (req: Request, res: Response) => {
-  try {
-    const { date } = req.params;
-    
-    const allSlots = [
-      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-      '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-      '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
-    ];
-    
-    const bookedSlots = await pool.query(
-      `SELECT interview_time as time_slot 
-      FROM client_bookings 
-      WHERE interview_date = $1
-      AND status != 'cancelled'`,
-      [date]
-    );
-    
-    const bookedTimes = bookedSlots.rows.map(row => row.time_slot);
-    const availableSlots = allSlots.filter(slot => !bookedTimes.includes(slot));
-    
-    res.json({
-      success: true,
-      date,
-      allSlots,
-      availableSlots,
-      bookedSlots: bookedTimes,
-      workingHours: {
-        start: '09:00',
-        end: '18:00',
-        interval: 30
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching available slots:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch available slots' 
-    });
-  }
-});
-
-// Get all bookings
-app.get('/api/bookings', async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        id,
-        client_name,
-        client_email,
-        client_phone,
-        interview_date,
-        interview_time,
-        interview_type,
-        status,
-        notes,
-        created_at,
-        updated_at
-      FROM client_bookings 
-      ORDER BY interview_date DESC, interview_time DESC
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch bookings' 
-    });
-  }
-});
-
-// Get user's bookings
-app.get('/api/bookings/my-bookings', async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Nu ești autentificat' });
-    }
-    
-    const token = authHeader.split(' ')[1];
-    let userId;
-    
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
-      userId = decoded.userId || decoded.id;
-    } catch (error) {
-      return res.status(401).json({ success: false, message: 'Token invalid' });
-    }
-    
-    // Get user's email
-    const userResult = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    
-    const userEmail = userResult.rows[0].email;
-    
-    // Get bookings
-    const result = await pool.query(`
-      SELECT 
-        id,
-        client_name,
-        client_email,
-        client_phone,
-        interview_date,
-        interview_time,
-        interview_type,
-        status,
-        notes,
-        created_at
-      FROM client_bookings 
-      WHERE client_email = $1
-      ORDER BY interview_date DESC, interview_time DESC
-    `, [userEmail]);
-    
-    res.json({
-      success: true,
-      bookings: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching user bookings:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch bookings' 
-    });
-  }
-});
-
-// Create new booking
-app.post('/api/bookings', async (req: Request, res: Response) => {
-  try {
-    const {
-      client_name,
-      client_email,
-      client_phone,
-      interview_date,
-      interview_time,
-      interview_type = 'online',
-      notes = '',
-      status = 'confirmed'
-    } = req.body;
-
-    if (!client_name || !client_email || !client_phone || !interview_date || !interview_time) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields' 
-      });
-    }
-
-    const existingBooking = await pool.query(
-      `SELECT id FROM client_bookings 
-       WHERE interview_date = $1
-       AND interview_time = $2
-       AND status != 'cancelled'`,
-      [interview_date, interview_time]
-    );
-
-    if (existingBooking.rows.length > 0) {
-      return res.status(409).json({ 
-        success: false, 
-        error: 'This time slot is already booked' 
-      });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO client_bookings 
-       (client_name, client_email, client_phone, interview_date, interview_time, interview_type, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING *`,
-      [client_name, client_email, client_phone, interview_date, interview_time, interview_type, notes, status]
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'Booking created successfully',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error creating booking:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create booking',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Update booking
-app.put('/api/bookings/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const result = await pool.query(
-      `UPDATE client_bookings 
-       SET status = $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING *`,
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Booking not found' 
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'Booking updated successfully',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error updating booking:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update booking' 
-    });
-  }
-});
-
-// Delete booking
-app.delete('/api/bookings/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    const result = await pool.query(
-      'DELETE FROM client_bookings WHERE id = $1 RETURNING id',
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Booking not found' 
-      });
-    }
-
-    res.json({ 
-      success: true,
-      message: 'Booking deleted successfully' 
-    });
-  } catch (error) {
-    console.error('Error deleting booking:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to delete booking' 
-    });
-  }
-});
-
-// Auth me endpoint
-app.get('/api/auth/me', async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
-    
-    const token = authHeader.split(' ')[1];
-    
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
-      
-      const result = await pool.query(
-        `SELECT 
-          id, 
-          username,
-          COALESCE(CONCAT(first_name, ' ', last_name), username) as name,
-          email, 
-          role,
-          phone
-        FROM users 
-        WHERE id = $1`,
-        [decoded.userId || decoded.id]
-      );
-      
-      if (result.rows.length === 0) {
-        return res.status(401).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-      
-      res.json({
-        success: true,
-        user: result.rows[0]
-      });
-      
-    } catch (jwtError) {
-      console.error('JWT verification error:', jwtError);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-  } catch (error) {
-    console.error('Error in /api/auth/me:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
-  }
-});
-
-// Upload document endpoint
-app.post('/api/upload/document', async (req: Request, res: Response, next: NextFunction) => {
+// ===== STANDALONE ENDPOINTS =====
+// Upload endpoints
+app.post('/api/upload/document', uploadLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -503,7 +269,6 @@ app.post('/api/upload/document', async (req: Request, res: Response, next: NextF
       return res.status(401).json({ success: false, message: 'Token invalid' });
     }
     
-    // Handle upload
     uploadMiddleware.single('file')(req, res, async (err: any) => {
       if (err) {
         return res.status(400).json({ success: false, message: err.message });
@@ -516,12 +281,11 @@ app.post('/api/upload/document', async (req: Request, res: Response, next: NextF
       const { docType = 'other', bookingId } = req.body;
       
       try {
-        // Save to database - FIXED: using 'type' not 'docType'
         const fileUrl = `/uploads/documents/${req.file.filename}`;
         const result = await pool.query(
-          `INSERT INTO documents (user_id, type, filename, original_name, path, size, mime_type, status, file_url, file_name, file_size, booking_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-          [userId, docType, req.file.filename, req.file.originalname, req.file.path, req.file.size, req.file.mimetype, 'pending', fileUrl, req.file.originalname, req.file.size, bookingId || null]
+          `INSERT INTO documents (user_id, type, filename, original_name, path, size, mime_type, status, file_url, file_name, file_size, booking_id, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+          [userId, docType, req.file.filename, req.file.originalname, req.file.path, req.file.size, req.file.mimetype, 'pending', fileUrl, req.file.originalname, req.file.size, bookingId || null, 'user']
         );
         
         res.json({
@@ -539,7 +303,6 @@ app.post('/api/upload/document', async (req: Request, res: Response, next: NextF
   }
 });
 
-// Get user documents
 app.get('/api/upload/documents', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -559,7 +322,14 @@ app.get('/api/upload/documents', async (req: Request, res: Response) => {
     }
     
     const result = await pool.query(
-      'SELECT * FROM documents WHERE user_id = $1 ORDER BY uploaded_at DESC',
+      `SELECT *, 
+        CASE 
+          WHEN uploaded_by = 'admin' THEN 'Încărcat de admin'
+          ELSE 'Încărcat de tine'
+        END as upload_source
+      FROM documents 
+      WHERE user_id = $1 
+      ORDER BY uploaded_at DESC`,
       [userId]
     );
     
@@ -570,111 +340,7 @@ app.get('/api/upload/documents', async (req: Request, res: Response) => {
   }
 });
 
-// Delete document
-app.delete('/api/upload/document/:id', async (req: Request, res: Response) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'Nu ești autentificat' });
-    }
-    
-    const token = authHeader.split(' ')[1];
-    let userId: number;
-    
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
-      userId = decoded.userId || decoded.id;
-    } catch (error: any) {
-      console.error("Eroare JWT verify:", error.message);
-      return res.status(401).json({ success: false, message: 'Token invalid' });
-    }
-    
-    const { id } = req.params;
-    
-    // Get document
-    const doc = await pool.query(
-      'SELECT * FROM documents WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
-    
-    if (doc.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Document negăsit' });
-    }
-    
-    // Delete file
-    if (fs.existsSync(doc.rows[0].path)) {
-      fs.unlinkSync(doc.rows[0].path);
-    }
-    
-    // Delete from DB
-    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
-    
-    res.json({ success: true, message: 'Document șters cu succes' });
-  } catch (error) {
-    console.error('Delete error:', error);
-    res.status(500).json({ success: false, message: 'Eroare la ștergere' });
-  }
-});
-
-// Get all users (admin)
-app.get('/api/users', async (req: Request, res: Response) => {
-  try {
-    let query = `
-      SELECT 
-        id, 
-        username,
-        COALESCE(CONCAT(first_name, ' ', last_name), username) as name,
-        email, 
-        role, 
-        phone, 
-        created_at,
-        last_login
-      FROM users
-    `;
-    const queryParams: any[] = [];
-    
-    if (req.query.role) {
-      query += ' WHERE role = $1';
-      queryParams.push(req.query.role);
-    }
-    
-    query += ' ORDER BY created_at DESC';
-    
-    const result = await pool.query(query, queryParams);
-    
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.json({
-      success: true,
-      data: []
-    });
-  }
-});
-
-// Get booking documents
-app.get('/api/bookings/:id/documents', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    
-    // Caută documentele direct după booking_id
-    const documents = await pool.query(
-      'SELECT * FROM documents WHERE booking_id = $1 ORDER BY uploaded_at DESC',
-      [id]
-    );
-    
-    res.json({ success: true, documents: documents.rows });
-  } catch (error) {
-    console.error('Error fetching booking documents:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch documents' });
-  }
-});
-
-// Upload document for user (admin only)
-app.post('/api/upload/admin-document', async (req: Request, res: Response, next: NextFunction) => {
+app.post('/api/upload/admin-document', uploadLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -688,7 +354,6 @@ app.post('/api/upload/admin-document', async (req: Request, res: Response, next:
       const decoded = jwt.verify(token, JWT_SECRET) as any;
       adminId = decoded.userId || decoded.id;
       
-      // Verifică dacă e admin
       const adminCheck = await pool.query('SELECT role FROM users WHERE id = $1', [adminId]);
       if (adminCheck.rows.length === 0 || adminCheck.rows[0].role !== 'admin') {
         return res.status(403).json({ success: false, message: 'Nu ai permisiuni de admin' });
@@ -697,7 +362,6 @@ app.post('/api/upload/admin-document', async (req: Request, res: Response, next:
       return res.status(401).json({ success: false, message: 'Token invalid' });
     }
     
-    // Handle upload
     uploadMiddleware.single('file')(req, res, async (err: any) => {
       if (err) {
         return res.status(400).json({ success: false, message: err.message });
@@ -710,12 +374,11 @@ app.post('/api/upload/admin-document', async (req: Request, res: Response, next:
       const { userId, type = 'identity' } = req.body;
       
       try {
-        // Save to database - FIXED: using 'type' not 'docType2'
         const fileUrl = `/uploads/documents/${req.file.filename}`;
         const result = await pool.query(
-          `INSERT INTO documents (user_id, type, filename, original_name, path, size, mime_type, status, file_url, file_name, file_size, verified_by_admin, verified_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-          [userId, type, req.file.filename, req.file.originalname, req.file.path, req.file.size, req.file.mimetype, 'verified', fileUrl, req.file.originalname, req.file.size, true, new Date()]
+          `INSERT INTO documents (user_id, type, filename, original_name, path, size, mime_type, status, file_url, file_name, file_size, verified_by_admin, verified_at, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+          [userId, type, req.file.filename, req.file.originalname, req.file.path, req.file.size, req.file.mimetype, 'verified', fileUrl, req.file.originalname, req.file.size, true, new Date(), 'admin']
         );
         
         res.json({
@@ -733,7 +396,60 @@ app.post('/api/upload/admin-document', async (req: Request, res: Response, next:
   }
 });
 
-// Download document endpoint - NEW
+app.delete('/api/upload/document/:id', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Nu ești autentificat' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    let userId: number;
+    let isAdmin = false;
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      userId = decoded.userId || decoded.id;
+      
+      const userCheck = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+      if (userCheck.rows.length > 0 && userCheck.rows[0].role === 'admin') {
+        isAdmin = true;
+      }
+    } catch (error: any) {
+      console.error("Eroare JWT verify:", error.message);
+      return res.status(401).json({ success: false, message: 'Token invalid' });
+    }
+    
+    const { id } = req.params;
+    
+    let doc;
+    if (isAdmin) {
+      doc = await pool.query('SELECT * FROM documents WHERE id = $1', [id]);
+    } else {
+      doc = await pool.query(
+        'SELECT * FROM documents WHERE id = $1 AND user_id = $2',
+        [id, userId]
+      );
+    }
+    
+    if (doc.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Document negăsit' });
+    }
+    
+    if (fs.existsSync(doc.rows[0].path)) {
+      fs.unlinkSync(doc.rows[0].path);
+    }
+    
+    await pool.query('DELETE FROM documents WHERE id = $1', [id]);
+    
+    res.json({ success: true, message: 'Document șters cu succes' });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ success: false, message: 'Eroare la ștergere' });
+  }
+});
+
+// Download document endpoint
 app.get('/api/download/document/:filename', async (req: Request, res: Response) => {
   try {
     const { filename } = req.params;
@@ -743,7 +459,6 @@ app.get('/api/download/document/:filename', async (req: Request, res: Response) 
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // Get original name from database
     const docResult = await pool.query(
       'SELECT original_name FROM documents WHERE filename = $1',
       [filename]
@@ -768,7 +483,8 @@ app.get('/', (req: Request, res: Response) => {
       auth: '/api/auth',
       users: '/api/users',
       bookings: '/api/bookings',
-      timeSlots: '/api/bookings/time-slots',
+      timeSlots: '/api/time-slots',
+      statistics: '/api/statistics',
       upload: '/api/upload',
       health: '/health'
     }
@@ -790,6 +506,14 @@ app.use((req: Request, res: Response) => {
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error('❌ Error:', err);
   
+  if (err.status === 429) {
+    return res.status(429).json({
+      success: false,
+      message: err.message || 'Too many requests',
+      retryAfter: err.retryAfter
+    });
+  }
+  
   const status = err.status || 500;
   const message = err.message || 'Internal server error';
   
@@ -806,7 +530,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // Initialize database tables
 async function initializeDatabase() {
   try {
-    // Create client_bookings table if not exists
+    // Create tables if not exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS client_bookings (
         id SERIAL PRIMARY KEY,
@@ -822,6 +546,11 @@ async function initializeDatabase() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await pool.query(`
+      ALTER TABLE documents 
+      ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR(20) DEFAULT 'user'
+    `).catch(() => {});
 
     console.log('✅ Database tables initialized');
 
@@ -867,10 +596,10 @@ async function initializeDatabase() {
 const server = app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://94.156.250.138:5000'}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://94.156.250.138'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
+  console.log(`🔒 Rate limiting: ${process.env.NODE_ENV === 'production' ? 'Enabled' : 'Disabled in development'}`);
   
-  // Initialize database
   initializeDatabase();
 });
 

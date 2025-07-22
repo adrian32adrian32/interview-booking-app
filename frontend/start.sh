@@ -1,3 +1,3 @@
 #!/bin/bash
-export PORT=3001
+cd /home/apps/interview-booking-app/frontend
 npm start

@@ -14,6 +14,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import dynamic from 'next/dynamic';
 
 const navigation = [
@@ -40,23 +41,23 @@ function DashboardLayoutContent({
   // Prevent hydration errors
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 futuristic:bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 futuristic:border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 futuristic:bg-background transition-colors duration-300">
       {/* Mobile sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 bg-gray-600 dark:bg-gray-900 futuristic:bg-black bg-opacity-75" onClick={() => setSidebarOpen(false)} />
           
-          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white">
+          <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white dark:bg-gray-800 futuristic:bg-card">
             <div className="flex h-16 items-center justify-between px-4">
-              <h2 className="text-lg font-semibold">Interview Booking</h2>
-              <button onClick={() => setSidebarOpen(false)}>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-foreground">Interview Booking</h2>
+              <button onClick={() => setSidebarOpen(false)} className="text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground">
                 <X className="h-6 w-6" />
               </button>
             </div>
@@ -71,15 +72,18 @@ function DashboardLayoutContent({
                     className={`
                       group flex items-center px-2 py-2 text-sm font-medium rounded-md
                       ${isActive
-                        ? 'bg-blue-100 text-blue-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-blue-100 dark:bg-blue-900/50 futuristic:bg-primary text-blue-900 dark:text-blue-300 futuristic:text-primary-foreground'
+                        : 'text-gray-600 dark:text-gray-300 futuristic:text-foreground hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-accent hover:text-gray-900 dark:hover:text-gray-100 futuristic:hover:text-accent-foreground'
                       }
                     `}
                   >
                     <item.icon
                       className={`
                         mr-3 h-5 w-5 flex-shrink-0
-                        ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
+                        ${isActive 
+                          ? 'text-blue-600 dark:text-blue-400 futuristic:text-primary-foreground' 
+                          : 'text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-500 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground'
+                        }
                       `}
                     />
                     {item.name}
@@ -88,12 +92,12 @@ function DashboardLayoutContent({
               })}
             </nav>
             
-            <div className="p-4 border-t">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 futuristic:border-border">
               <button
                 onClick={logout}
-                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full"
+                className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300 futuristic:text-foreground hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-accent hover:text-gray-900 dark:hover:text-gray-100 futuristic:hover:text-accent-foreground w-full"
               >
-                <LogOut className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" />
+                <LogOut className="mr-3 h-5 w-5 text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-500 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground" />
                 Deconectare
               </button>
             </div>
@@ -103,9 +107,10 @@ function DashboardLayoutContent({
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex flex-1 flex-col bg-white border-r">
-          <div className="flex h-16 items-center px-4">
-            <h2 className="text-lg font-semibold">Interview Booking</h2>
+        <div className="flex flex-1 flex-col bg-white dark:bg-gray-800 futuristic:bg-card border-r border-gray-200 dark:border-gray-700 futuristic:border-border">
+          <div className="flex h-16 items-center justify-between px-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-foreground">Interview Booking</h2>
+            <ThemeToggle />
           </div>
           
           <nav className="flex-1 space-y-1 px-2 py-4">
@@ -118,15 +123,18 @@ function DashboardLayoutContent({
                   className={`
                     group flex items-center px-2 py-2 text-sm font-medium rounded-md
                     ${isActive
-                      ? 'bg-blue-100 text-blue-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-blue-100 dark:bg-blue-900/50 futuristic:bg-primary text-blue-900 dark:text-blue-300 futuristic:text-primary-foreground'
+                      : 'text-gray-600 dark:text-gray-300 futuristic:text-foreground hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-accent hover:text-gray-900 dark:hover:text-gray-100 futuristic:hover:text-accent-foreground'
                     }
                   `}
                 >
                   <item.icon
                     className={`
                       mr-3 h-5 w-5 flex-shrink-0
-                      ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
+                      ${isActive 
+                        ? 'text-blue-600 dark:text-blue-400 futuristic:text-primary-foreground' 
+                        : 'text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-500 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground'
+                      }
                     `}
                   />
                   {item.name}
@@ -135,18 +143,18 @@ function DashboardLayoutContent({
             })}
           </nav>
           
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 futuristic:border-border">
             {user && (
               <div className="mb-4">
-                <p className="text-sm font-medium text-gray-900">{user.name || user.email}</p>
-                <p className="text-xs text-gray-500">{user.role === 'admin' ? 'Administrator' : 'Utilizator'}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 futuristic:text-foreground">{user.name || user.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground">{user.role === 'admin' ? 'Administrator' : 'Utilizator'}</p>
               </div>
             )}
             <button
               onClick={logout}
-              className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full"
+              className="group flex items-center px-2 py-2 text-sm font-medium rounded-md text-gray-600 dark:text-gray-300 futuristic:text-foreground hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-accent hover:text-gray-900 dark:hover:text-gray-100 futuristic:hover:text-accent-foreground w-full"
             >
-              <LogOut className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" />
+              <LogOut className="mr-3 h-5 w-5 text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-500 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground" />
               Deconectare
             </button>
           </div>
@@ -155,16 +163,16 @@ function DashboardLayoutContent({
 
       {/* Main content */}
       <div className="lg:pl-64">
-        <div className="sticky top-0 z-10 bg-white shadow lg:hidden">
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 futuristic:bg-card shadow dark:shadow-gray-700 futuristic:shadow-border lg:hidden">
           <div className="flex h-16 items-center px-4">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-600"
+              className="text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground hover:text-gray-600 dark:hover:text-gray-300 futuristic:hover:text-foreground"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-6 w-6" />
             </button>
-            <h1 className="ml-4 text-lg font-semibold">Interview Booking</h1>
+            <h1 className="ml-4 text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-foreground">Interview Booking</h1>
           </div>
         </div>
 

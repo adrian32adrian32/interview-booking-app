@@ -65,7 +65,7 @@ const BookingForm: React.FC = () => {
   const fetchAvailableSlots = async (date: string) => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/time-slots/available/${date}`);
+      const response = await api.get(`/time-slots/available/${date}`);
       
       const slots = response.data.allSlots.map((time: string) => ({
         time,

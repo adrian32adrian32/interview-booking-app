@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import { ArrowLeft, Calendar, Clock, Mail, Phone, User, MapPin, Edit2, FileText, Download, Eye, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { ArrowLeft, Calendar, Clock, Mail, Phone, User, X, FileText, Eye, Download, Trash2 } from 'lucide-react';
+import DocumentUpload from '@/components/DocumentUpload';
 
-export default function ViewBookingPage() {
+export default function EditBookingPage() {
   const params = useParams();
   const router = useRouter();
   const [booking, setBooking] = useState<any>(null);
@@ -30,7 +31,6 @@ export default function ViewBookingPage() {
         router.push('/admin/bookings');
       }
     } catch (error) {
-      console.error('Error fetching booking:', error);
       toast.error('Eroare la încărcarea datelor');
     } finally {
       setLoading(false);
@@ -43,6 +43,27 @@ export default function ViewBookingPage() {
       setDocuments(res.data.documents || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/bookings/${params.id}`, booking);
+      toast.success('Programare actualizată cu succes');
+      router.push('/admin/bookings');
+    } catch (error) {
+      toast.error('Eroare la actualizarea programării');
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      await axios.put(`/api/bookings/${params.id}`, { status: newStatus });
+      setBooking({ ...booking, status: newStatus });
+      toast.success('Status actualizat');
+    } catch (error) {
+      toast.error('Eroare la actualizarea statusului');
     }
   };
 
@@ -59,197 +80,178 @@ export default function ViewBookingPage() {
     }
   };
 
-  const handlePreview = (doc: any) => {
-    setPreviewDoc(doc);
+  const handleDeleteDocument = async (docId: number) => {
+    if (!confirm('Sigur doriți să ștergeți acest document?')) return;
+    
+    try {
+      await axios.delete(`/api/upload/document/${docId}`);
+      toast.success('Document șters');
+      fetchDocuments();
+    } catch (error) {
+      toast.error('Eroare la ștergerea documentului');
+    }
   };
 
-  const closePreview = () => {
-    setPreviewDoc(null);
-  };
-
-  if (loading) return <div className="p-6">Se încarcă...</div>;
-  if (!booking) return <div className="p-6">Programare negăsită</div>;
-
-  const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-    completed: 'bg-blue-100 text-blue-800'
-  };
-
-  const statusLabels = {
-    pending: 'În așteptare',
-    confirmed: 'Confirmat',
-    cancelled: 'Anulat',
-    completed: 'Finalizat'
-  };
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 futuristic:border-cyan-400"></div>
+    </div>
+  );
+  
+  if (!booking) return null;
 
   return (
     <div className="py-6">
       <button
         onClick={() => router.push('/admin/bookings')}
-        className="mb-4 flex items-center text-blue-600 hover:text-blue-800"
+        className="mb-4 flex items-center text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
       >
         <ArrowLeft className="w-4 h-4 mr-1" />
         Înapoi la programări
       </button>
 
-      <div className="bg-white shadow rounded-lg">
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-start">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-6">
+        Editează Programare #{booking.id}
+      </h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Formular Date Utilizator */}
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Date Utilizator</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Detalii Programare #{booking.id}
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Creată la {new Date(booking.created_at).toLocaleDateString('ro-RO')}
-              </p>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Email</label>
+              <input
+                type="email"
+                value={booking.client_email}
+                disabled
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-gray-100 dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
+              />
             </div>
-            <div className="flex items-center gap-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[booking.status]}`}>
-                {statusLabels[booking.status]}
-              </span>
-              <button
-                onClick={() => router.push(`/admin/bookings/${booking.id}/edit`)}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Nume</label>
+              <input
+                type="text"
+                value={booking.client_name || ''}
+                onChange={(e) => setBooking({...booking, client_name: e.target.value})}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Telefon</label>
+              <input
+                type="text"
+                value={booking.client_phone || ''}
+                onChange={(e) => setBooking({...booking, client_phone: e.target.value})}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
+              />
+            </div>
+
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-2">
+                Status
+              </label>
+              <select
+                value={booking.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
               >
-                <Edit2 className="w-4 h-4" />
-                Editează
-              </button>
+                <option value="pending">În așteptare</option>
+                <option value="confirmed">Confirmat</option>
+                <option value="cancelled">Anulat</option>
+                <option value="completed">Finalizat</option>
+              </select>
             </div>
-          </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-2">
+                Notițe
+              </label>
+              <textarea
+                value={booking.notes || ''}
+                onChange={(e) => setBooking({...booking, notes: e.target.value})}
+                rows={4}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 transition-colors"
+            >
+              Salvează Modificările
+            </button>
+          </form>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Informații Client */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">Informații Client</h2>
-              <div className="space-y-3">
-                <div className="flex items-start">
-                  <User className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Nume</p>
-                    <p className="text-base">{booking.client_name}</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <Mail className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Email</p>
-                    <p className="text-base">{booking.client_email}</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <Phone className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Telefon</p>
-                    <p className="text-base">{booking.client_phone}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Documente */}
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Documente Client</h2>
+          
+          <DocumentUpload
+            bookingId={booking.id}
+            documents={documents}
+            onUploadComplete={fetchDocuments}
+          />
 
-            {/* Detalii Interviu */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4 text-gray-900">Detalii Interviu</h2>
-              <div className="space-y-3">
-                <div className="flex items-start">
-                  <Calendar className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Data</p>
-                    <p className="text-base">{new Date(booking.interview_date).toLocaleDateString('ro-RO', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}</p>
+          {/* Lista documente existente cu preview */}
+          {documents.length > 0 && (
+            <div className="mt-6 space-y-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70 mb-2">Documente existente:</p>
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30 rounded bg-gray-50 dark:bg-gray-700/50 futuristic:bg-purple-800/20">
+                  <div className="flex items-center flex-1">
+                    <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 futuristic:text-purple-400 mr-2" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{doc.original_name || doc.filename}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">
+                        {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPreviewDoc(doc)}
+                      className="text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
+                      title="Vizualizează"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="text-green-600 dark:text-green-400 futuristic:text-green-400 hover:text-green-800 dark:hover:text-green-300 futuristic:hover:text-green-300"
+                      title="Descarcă"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id)}
+                      className="text-red-600 dark:text-red-400 futuristic:text-red-400 hover:text-red-800 dark:hover:text-red-300 futuristic:hover:text-red-300"
+                      title="Șterge"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-start">
-                  <Clock className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Ora</p>
-                    <p className="text-base">{booking.interview_time}</p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <MapPin className="w-5 h-5 mr-3 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Tip</p>
-                    <p className="text-base">{booking.interview_type === 'online' ? 'Online' : 'În persoană'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Notițe */}
-          {booking.notes && (
-            <div className="mt-8 pt-8 border-t">
-              <h2 className="text-lg font-semibold mb-2 text-gray-900">Notițe</h2>
-              <p className="text-gray-700 whitespace-pre-wrap">{booking.notes}</p>
+              ))}
             </div>
           )}
-
-          {/* Documente */}
-          <div className="mt-8 pt-8 border-t">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900">Documente</h2>
-            {documents.length > 0 ? (
-              <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                    <div className="flex items-center flex-1">
-                      <FileText className="w-6 h-6 text-gray-500 mr-3" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{doc.original_name || doc.filename}</p>
-                        <p className="text-xs text-gray-500">
-                          Încărcat la {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {doc.verified_by_admin && (
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          Verificat
-                        </span>
-                      )}
-                      <button
-                        onClick={() => handlePreview(doc)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Vizualizează"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded transition-colors"
-                        title="Descarcă"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">Nu există documente încărcate pentru această programare.</p>
-            )}
-          </div>
         </div>
       </div>
 
       {/* Modal Preview Document */}
       {previewDoc && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">{previewDoc.original_name || previewDoc.filename}</h3>
+          <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/95 rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{previewDoc.original_name || previewDoc.filename}</h3>
               <button
-                onClick={closePreview}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                onClick={() => setPreviewDoc(null)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-purple-800/30 rounded-full transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400 futuristic:text-cyan-200" />
               </button>
             </div>
             <div className="flex-1 overflow-auto p-4">
@@ -267,11 +269,14 @@ export default function ViewBookingPage() {
                 />
               ) : (
                 <div className="text-center py-20">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Previzualizarea nu este disponibilă pentru acest tip de fișier</p>
+                  <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 futuristic:text-purple-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-200">Previzualizarea nu este disponibilă pentru acest tip de fișier</p>
                   <button
-                    onClick={() => handleDownload(previewDoc)}
-                    className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    onClick={() => {
+                      handleDownload(previewDoc);
+                      setPreviewDoc(null);
+                    }}
+                    className="mt-4 bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 transition-colors"
                   >
                     Descarcă pentru vizualizare
                   </button>

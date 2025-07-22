@@ -52,9 +52,11 @@ pool.connect((err, client, release) => {
 // ===== RATE LIMITERS CONFIGURATION WITH FIX =====
 // Helper function to create rate limiter with IPv6 fix
 const createRateLimiter = (windowMs: number, max: number, message: string, skipSuccessfulRequests: boolean = false) => {
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+  
   return rateLimit({
     windowMs,
-    max,
+    max: isDevelopment ? max * 100 : max, // 100x mai permisiv în development
     message,
     standardHeaders: true,
     legacyHeaders: false,
@@ -88,7 +90,7 @@ const createRateLimiter = (windowMs: number, max: number, message: string, skipS
 // Rate limiter pentru login - mai restrictiv
 const loginLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 minute
-  5, // maxim 5 încercări
+  5, // maxim 5 încercări în production, 500 în development
   'Prea multe încercări de autentificare. Vă rugăm încercați din nou peste 15 minute.'
 );
 
@@ -134,6 +136,7 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:5000',
       'http://localhost:3002',
+      'http://localhost:3001',
       'http://94.156.250.138:3000',
       'http://94.156.250.138:5000',
       'http://94.156.250.138:3002',
@@ -144,7 +147,7 @@ const corsOptions = {
 
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       callback(null, true);
     } else {
       console.log('⚠️ CORS blocked origin:', origin);
@@ -230,24 +233,28 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Apply general API rate limiting to all /api routes
-//app.use('/api/', apiLimiter);
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api/', apiLimiter);
+}
 
 // API Routes with specific rate limiters
 // Auth routes with specific limiters for sensitive endpoints
-//app.use('/api/auth', (req: Request, res: Response, next: NextFunction) => {
-  // Apply specific rate limiters based on the path
-  //if (req.path === '/login' && req.method === 'POST') {
- //   loginLimiter(req, res, next);
- // } else if (req.path === '/register' && req.method === 'POST') {
- //   registerLimiter(req, res, next);
-  //} else if (req.path === '/forgot-password' && req.method === 'POST') {
-  //  forgotPasswordLimiter(req, res, next);
-  //} else {
- //   next();
- // }
-//}, authRoutes);
-// Și înlocuiește cu:
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', (req: Request, res: Response, next: NextFunction) => {
+  // Apply specific rate limiters based on the path ONLY in production
+  if (process.env.NODE_ENV === 'production') {
+    if (req.path === '/login' && req.method === 'POST') {
+      loginLimiter(req, res, next);
+    } else if (req.path === '/register' && req.method === 'POST') {
+      registerLimiter(req, res, next);
+    } else if (req.path === '/forgot-password' && req.method === 'POST') {
+      forgotPasswordLimiter(req, res, next);
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
+}, authRoutes);
 
 // Time slots endpoint
 app.get('/api/time-slots', (req: Request, res: Response) => {
@@ -1071,7 +1078,8 @@ const server = app.listen(PORT, () => {
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://94.156.250.138:5000'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
-  console.log(`🔒 Rate limiting enabled for API endpoints`);
+  console.log(`🔒 Rate limiting: ${process.env.NODE_ENV === 'production' ? 'Enabled' : 'Disabled in development'}`);
+  console.log(`📧 Email notifications: ${process.env.SMTP_USER ? 'Configured' : 'Not configured'}`);
   
   // Initialize database
   initializeDatabase();

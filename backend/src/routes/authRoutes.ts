@@ -109,4 +109,64 @@ router.post('/register', async (req: Request, res: Response) => {
   }
 });
 
+// Get current user
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided'
+      });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      
+      const result = await pool.query(
+        `SELECT 
+          id, 
+          username,
+          first_name,
+          last_name,
+          COALESCE(CONCAT(first_name, ' ', last_name), username) as name,
+          email, 
+          role,
+          phone
+        FROM users 
+        WHERE id = $1`,
+        [decoded.userId || decoded.id]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      
+      res.json({
+        success: true,
+        user: result.rows[0]
+      });
+      
+    } catch (jwtError) {
+      console.error('JWT verification error:', jwtError);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token'
+      });
+    }
+  } catch (error) {
+    console.error('Error in /api/auth/me:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+});
+
 export default router;

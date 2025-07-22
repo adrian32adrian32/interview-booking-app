@@ -34,15 +34,15 @@ export default function EditUserPage() {
     try {
       const res = await axios.get(`/users/${params.id}`);
       if (res.data.success) {
-        setUser(res.data.user);
+        setUser(res.data.data);
         setFormData({
-          username: res.data.user.username || '',
-          email: res.data.user.email || '',
-          first_name: res.data.user.first_name || '',
-          last_name: res.data.user.last_name || '',
-          phone: res.data.user.phone || '',
-          role: res.data.user.role || 'user',
-          status: res.data.user.status || 'active',
+          username: res.data.data.username || '',
+          email: res.data.data.email || '',
+          first_name: res.data.data.first_name || '',
+          last_name: res.data.data.last_name || '',
+          phone: res.data.data.phone || '',
+          role: res.data.data.role || 'user',
+          status: res.data.data.status || 'active',
           password: ''
         });
       }
@@ -73,8 +73,7 @@ export default function EditUserPage() {
         first_name: formData.first_name,
         last_name: formData.last_name,
         phone: formData.phone,
-        role: formData.role,
-        status: formData.status
+        role: formData.role
       };
 
       // Adaugă parola doar dacă a fost completată

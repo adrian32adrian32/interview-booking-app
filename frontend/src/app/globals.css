@@ -1,3 +1,141 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 220.9 39.3% 11%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 71.4% 4.1%;
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 20% 98%;
+    --primary-foreground: 220.9 39.3% 11%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 216 12.2% 83.9%;
+  }
+  .futuristic {
+    --background: 220 40% 8%;
+    --foreground: 180 100% 90%;
+    --card: 220 40% 10%;
+    --card-foreground: 180 100% 90%;
+    --popover: 220 40% 10%;
+    --popover-foreground: 180 100% 90%;
+    --primary: 280 100% 70%;
+    --primary-foreground: 220 40% 8%;
+    --secondary: 260 60% 20%;
+    --secondary-foreground: 180 100% 90%;
+    --muted: 260 60% 20%;
+    --muted-foreground: 180 60% 70%;
+    --accent: 280 100% 70%;
+    --accent-foreground: 220 40% 8%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 180 100% 90%;
+    --border: 260 60% 25%;
+    --input: 260 60% 25%;
+    --ring: 280 100% 70%;
+  }
+}
+
+body {
+  @apply bg-background text-foreground;
+}
+/* Fix pentru inputuri în modul futuristic */
+.futuristic input,
+.futuristic textarea,
+.futuristic select {
+  color: #bdfffe !important;
+  background-color: rgba(220, 220, 255, 0.05);
+}
+
+.futuristic input::placeholder,
+.futuristic textarea::placeholder {
+  color: rgba(189, 255, 254, 0.5) !important;
+}
+
+/* Fix pentru select options în dark și futuristic */
+.dark option,
+.futuristic option {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+.futuristic option {
+  background-color: #0a0e27;
+  color: #bdfffe;
+}
+
+/* Fix pentru componente third-party care folosesc clase non-standard */
+.futuristic .text-black {
+  color: #bdfffe !important;
+}
+
+.dark .text-black {
+  color: #e5e7eb !important;
+}
+
+/* Scrollbar styling pentru dark și futuristic */
+.dark ::-webkit-scrollbar,
+.futuristic ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.futuristic ::-webkit-scrollbar-track {
+  background: #0a0e27;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.futuristic ::-webkit-scrollbar-thumb {
+  background: #7c3aed;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.futuristic ::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
+}

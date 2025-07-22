@@ -3,47 +3,39 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
-  // Căi care necesită autentificare
-  const protectedPaths = ['/admin', '/dashboard', '/profile', '/bookings'];
-  const isProtectedPath = protectedPaths.some(pp => path.startsWith(pp));
-  
-  if (isProtectedPath) {
-    // Verifică token în cookies (nu în localStorage care nu e accesibil aici)
-    const token = request.cookies.get('token');
-    
-    if (!token) {
-      // Redirect la login cu return URL
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('from', path);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    // Verifică rolul pentru admin
-    if (path.startsWith('/admin')) {
-      try {
-        const user = request.cookies.get('user');
-        if (user) {
-          const userData = JSON.parse(user.value);
-          if (userData.role !== 'admin') {
-            return NextResponse.redirect(new URL('/dashboard', request.url));
-          }
-        }
-      } catch (e) {
-        // Invalid user data
-        return NextResponse.redirect(new URL('/login', request.url));
-      }
-    }
+  const token = request.cookies.get('token');
+
+  // Paths that require authentication
+  const protectedPaths = ['/dashboard', '/profile', '/bookings', '/documents'];
+  const adminPaths = ['/admin'];
+  const authPaths = ['/login', '/register'];
+
+  // Check if it's a protected path
+  const isProtectedPath = protectedPaths.some(p => path.startsWith(p));
+  const isAdminPath = adminPaths.some(p => path.startsWith(p));
+  const isAuthPath = authPaths.some(p => path.startsWith(p));
+
+  // If user is on auth page and has token, redirect to dashboard
+  if (isAuthPath && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-  
+
+  // If user tries to access protected paths without token
+  if ((isProtectedPath || isAdminPath) && !token) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*',
     '/dashboard/:path*',
     '/profile/:path*',
-    '/bookings/:path*'
+    '/bookings/:path*',
+    '/documents/:path*',
+    '/admin/:path*',
+    '/login',
+    '/register'
   ]
 };

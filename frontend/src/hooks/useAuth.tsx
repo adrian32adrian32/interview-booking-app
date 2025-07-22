@@ -16,10 +16,12 @@ interface User {
   last_name?: string;
   firstName?: string;
   lastName?: string;
+  email_verified?: boolean;
   emailVerified?: boolean;
   is_active?: boolean;
   avatar?: string;
   phone?: string;
+  status?: string;
 }
 
 interface AuthContextType {
@@ -28,6 +30,7 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<LoginResponse>;
   logout: () => void;
   checkAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 interface LoginData {
@@ -53,6 +56,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Normalize user data
+  const normalizeUser = (userData: any): User => {
+    return {
+      ...userData,
+      // Normalize name fields
+      first_name: userData.first_name || userData.firstName,
+      last_name: userData.last_name || userData.lastName,
+      firstName: userData.firstName || userData.first_name,
+      lastName: userData.lastName || userData.last_name,
+      // Normalize email verified
+      email_verified: userData.email_verified || userData.emailVerified,
+      emailVerified: userData.emailVerified || userData.email_verified,
+      // Ensure we have a display name
+      name: userData.name || `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username || userData.email
+    };
+  };
+
   // Verifică dacă utilizatorul este autentificat
   const checkAuth = async () => {
     try {
@@ -70,10 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Folosim instanța api care are deja baseURL configurat
-      const response = await api.get('/auth/me'); // Eliminat /api din față
+      const response = await api.get('/auth/me');
 
       if (response.data.success) {
-        setUser(response.data.user || response.data.data);
+        const userData = normalizeUser(response.data.user || response.data.data);
+        setUser(userData);
       } else {
         // Curăță datele de autentificare
         localStorage.removeItem('token');
@@ -101,10 +122,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const token = localStorage.getItem('token') || Cookies.get('token');
+      
+      if (!token) {
+        return;
+      }
+
+      const response = await api.get('/auth/me');
+
+      if (response.data.success) {
+        const userData = normalizeUser(response.data.user || response.data.data);
+        setUser(userData);
+        
+        // Update localStorage and cookies
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+        Cookies.set('user', JSON.stringify(userData));
+      }
+    } catch (error: any) {
+      console.error('Error refreshing user:', error);
+      // Don't logout on refresh error, just log it
+    }
+  };
+
   useEffect(() => {
     // Verifică doar pe client-side
     if (typeof window !== 'undefined') {
-      // checkAuth();
+      checkAuth();
     } else {
       setLoading(false);
     }
@@ -116,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔐 Sending login request...');
       
       // Folosim instanța api configurată
-      const response = await api.post('/auth/login', { // Eliminat /api din față
+      const response = await api.post('/auth/login', {
         email: data.email,
         password: data.password
       });
@@ -125,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.data.success) {
         // Extragem datele din răspuns
-        const userData = response.data.user;
+        const userData = normalizeUser(response.data.user);
         const token = response.data.token;
         
         console.log('👤 User data:', userData);
@@ -186,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       // Apelează endpoint-ul de logout (opțional)
-      await api.post('/auth/logout').catch(() => { // Eliminat /api din față
+      await api.post('/auth/logout').catch(() => {
         // Ignoră eroarea dacă endpoint-ul nu există
       });
     } catch (error) {
@@ -212,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
