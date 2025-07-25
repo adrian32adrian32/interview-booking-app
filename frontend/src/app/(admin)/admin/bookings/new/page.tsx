@@ -198,17 +198,17 @@ export default function NewBookingPage() {
       <div className="mb-6">
         <button
           onClick={() => router.push('/admin/bookings')}
-          className="flex items-center text-gray-600 hover:text-gray-900"
+          className="flex items-center text-gray-600 dark:text-gray-400 futuristic:text-cyan-400 hover:text-gray-900 dark:hover:text-gray-100 futuristic:hover:text-cyan-300"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Înapoi la programări
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">Programare Nouă</h1>
-          <p className="mt-1 text-sm text-gray-600">
+      <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 rounded-lg shadow-sm dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Programare Nouă</h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
             Completează formularul pentru a crea o nouă programare
           </p>
         </div>
@@ -216,83 +216,89 @@ export default function NewBookingPage() {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Informații Client */}
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Informații Client</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4">Informații Client</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Nume complet *
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
                   <input
                     type="text"
                     name="client_name"
                     value={formData.client_name}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.client_name ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
+                      errors.client_name 
+                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
+                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                     placeholder="Ex: Ion Popescu"
                   />
                 </div>
                 {errors.client_name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.client_name}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.client_name}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Email *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
                   <input
                     type="email"
                     name="client_email"
                     value={formData.client_email}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.client_email ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
+                      errors.client_email 
+                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
+                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                     placeholder="email@exemplu.ro"
                   />
                 </div>
                 {errors.client_email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.client_email}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.client_email}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Telefon *
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
                   <input
                     type="tel"
                     name="client_phone"
                     value={formData.client_phone}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.client_phone ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
+                      errors.client_phone 
+                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
+                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                     placeholder="0722123456"
                   />
                 </div>
                 {errors.client_phone && (
-                  <p className="mt-1 text-sm text-red-600">{errors.client_phone}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.client_phone}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Tip interviu *
                 </label>
                 <select
                   name="interview_type"
                   value={formData.interview_type}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
                 >
                   <option value="online">💻 Online (Video Call)</option>
                   <option value="in_person">🏢 În persoană (La birou)</option>
@@ -303,14 +309,14 @@ export default function NewBookingPage() {
 
           {/* Programare */}
           <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Detalii Programare</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4">Detalii Programare</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Data *
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
                   <input
                     type="date"
                     name="interview_date"
@@ -318,29 +324,33 @@ export default function NewBookingPage() {
                     onChange={handleChange}
                     min={minDate}
                     max={maxDate}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.interview_date ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
+                      errors.interview_date 
+                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
+                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                   />
                 </div>
                 {errors.interview_date && (
-                  <p className="mt-1 text-sm text-red-600">{errors.interview_date}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.interview_date}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                   Ora *
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
                   <select
                     name="interview_time"
                     value={formData.interview_time}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      errors.interview_time ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
+                      errors.interview_time 
+                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
+                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                     disabled={checkingAvailability}
                   >
                     <option value="">Selectează ora</option>
@@ -356,10 +366,10 @@ export default function NewBookingPage() {
                   </select>
                 </div>
                 {errors.interview_time && (
-                  <p className="mt-1 text-sm text-red-600">{errors.interview_time}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.interview_time}</p>
                 )}
                 {checkingAvailability && (
-                  <p className="mt-1 text-sm text-gray-500">Se verifică disponibilitatea...</p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">Se verifică disponibilitatea...</p>
                 )}
               </div>
             </div>
@@ -367,47 +377,47 @@ export default function NewBookingPage() {
 
           {/* Note adiționale */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
               Note adiționale
             </label>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <FileText className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
               <textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleChange}
                 rows={4}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
                 placeholder="Informații adiționale despre programare..."
               />
             </div>
           </div>
 
           {/* Opțiuni */}
-          <div className="border-t pt-4">
+          <div className="border-t dark:border-gray-700 futuristic:border-purple-500/30 pt-4">
             <label className="flex items-center">
               <input
                 type="checkbox"
                 name="send_confirmation"
                 checked={formData.send_confirmation}
                 onChange={handleChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 dark:text-blue-400 futuristic:text-purple-400 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded bg-white dark:bg-gray-700 futuristic:bg-purple-900/30"
               />
-              <span className="ml-2 text-sm text-gray-700">
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 futuristic:text-cyan-200">
                 Trimite email de confirmare clientului
               </span>
             </label>
           </div>
 
           {/* Notă informativă */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 futuristic:bg-purple-800/20 border border-blue-200 dark:border-blue-800 futuristic:border-purple-500/30 rounded-lg p-4">
             <div className="flex">
-              <AlertCircle className="h-5 w-5 text-blue-400 flex-shrink-0" />
+              <AlertCircle className="h-5 w-5 text-blue-400 dark:text-blue-300 futuristic:text-cyan-400 flex-shrink-0" />
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
+                <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200 futuristic:text-cyan-200">
                   Notă importantă
                 </h3>
-                <p className="mt-1 text-sm text-blue-700">
+                <p className="mt-1 text-sm text-blue-700 dark:text-blue-300 futuristic:text-cyan-300/80">
                   Programările create din panoul de administrare sunt automat confirmate.
                   Clientul va primi un email de confirmare cu detaliile programării.
                 </p>
@@ -416,11 +426,11 @@ export default function NewBookingPage() {
           </div>
 
           {/* Butoane acțiune */}
-          <div className="flex justify-end space-x-3 pt-6 border-t">
+          <div className="flex justify-end space-x-3 pt-6 border-t dark:border-gray-700 futuristic:border-purple-500/30">
             <button
               type="button"
               onClick={() => router.push('/admin/bookings')}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg text-gray-700 dark:text-gray-300 futuristic:text-cyan-200 hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-purple-800/20"
               disabled={loading}
             >
               Anulează
@@ -428,7 +438,7 @@ export default function NewBookingPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 disabled:opacity-50"
             >
               {loading ? (
                 <>

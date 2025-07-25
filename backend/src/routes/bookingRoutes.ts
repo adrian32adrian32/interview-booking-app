@@ -1,8 +1,35 @@
 import { Router, Request, Response } from 'express';
 import { pool, JWT_SECRET } from '../server';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
+
+// Configurare multer pentru upload - ACCEPTĂ ORICE TIP DE FIȘIER
+const storage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/documents');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `doc-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB pentru orice tip de fișier
+  fileFilter: (req, file, cb) => {
+    // ACCEPTĂ ORICE TIP DE FIȘIER
+    cb(null, true);
+  }
+});
 
 // Middleware pentru verificare autentificare
 const authMiddleware = async (req: Request, res: Response, next: Function) => {
@@ -15,6 +42,11 @@ const authMiddleware = async (req: Request, res: Response, next: Function) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     (req as any).userId = decoded.userId || decoded.id;
+    (req as any).user = { id: decoded.userId || decoded.id };
+    
+    // Get user role
+    const userResult = await pool.query('SELECT role FROM users WHERE id = $1', [(req as any).userId]);
+    (req as any).userRole = userResult.rows[0]?.role || 'user';
     
     next();
   } catch (error) {
@@ -426,29 +458,264 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Get booking documents
-router.get('/:id/documents', async (req: Request, res: Response) => {
+// GET /api/bookings/:id/documents
+router.get('/:id/documents', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const userRole = (req as any).userRole;
+    const userId = (req as any).userId;
     
-    const result = await pool.query(
-      `SELECT 
-        d.*,
-        u.username as uploaded_by_username
-      FROM documents d
-      LEFT JOIN users u ON u.id = d.user_id
-      WHERE d.booking_id = $1 
-      ORDER BY d.uploaded_at DESC`,
+    console.log('Fetching documents for booking ID:', id);
+    
+    // Mai întâi obținem booking-ul
+    const bookingResult = await pool.query(
+      'SELECT * FROM client_bookings WHERE id = $1',
       [id]
     );
     
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    
+    const booking = bookingResult.rows[0];
+    
+    // Verifică permisiunile
+    if (userRole !== 'admin' && booking.client_email !== (req as any).userEmail) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Obține TOATE documentele asociate cu acest booking
+    const documentsResult = await pool.query(`
+      SELECT 
+        d.*,
+        d.original_name,
+        d.mime_type,
+        d.file_url,
+        d.filename,
+        d.size,
+        d.uploaded_at,
+        d.booking_id
+      FROM documents d
+      WHERE d.booking_id = $1
+      ORDER BY d.uploaded_at DESC
+    `, [id]);
+    
+    console.log(`Found ${documentsResult.rows.length} documents for booking ${id}`);
+    
     res.json({ 
       success: true, 
-      documents: result.rows 
+      documents: documentsResult.rows,
+      booking_id: id,
+      count: documentsResult.rows.length
+    });
+    
+  } catch (error) {
+    console.error('Get booking documents error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch documents',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// POST /api/bookings/:id/documents - Upload document pentru booking
+router.post('/:id/documents', authMiddleware, upload.single('file'), async (req: Request, res: Response) => {
+  try {
+    console.log('📤 Upload document pentru booking:', req.params.id);
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nu a fost încărcat niciun fișier'
+      });
+    }
+
+    const bookingId = parseInt(req.params.id);
+    const userId = (req as any).userId;
+    const userRole = (req as any).userRole;
+    const { type = 'other', description = '' } = req.body;
+    
+    console.log('File details:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+    
+    // Verifică dacă booking-ul există
+    const bookingResult = await pool.query(
+      'SELECT * FROM client_bookings WHERE id = $1',
+      [bookingId]
+    );
+    
+    if (bookingResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Programarea nu există' });
+    }
+    
+    const booking = bookingResult.rows[0];
+    
+    // Verifică permisiunile
+    const userEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmail = userEmailResult.rows[0]?.email;
+    
+    if (userRole !== 'admin' && booking.client_email !== userEmail) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Nu ai permisiunea să încarci documente pentru această programare' 
+      });
+    }
+    
+    // Salvează în DB
+    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    const result = await pool.query(
+      `INSERT INTO documents (
+        user_id, booking_id, type, filename, original_name, 
+        mime_type, size, path, file_url, file_name, file_size,
+        uploaded_by, description, status, uploaded_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP)
+      RETURNING *`,
+      [
+        userId, 
+        bookingId, 
+        type, 
+        req.file.filename, 
+        req.file.originalname, 
+        req.file.mimetype, 
+        req.file.size, 
+        req.file.path,
+        fileUrl,
+        req.file.originalname,
+        req.file.size,
+        userRole === 'admin' ? 'admin' : 'user',
+        description,
+        'pending'
+      ]
+    );
+
+    console.log('Document salvat în DB:', result.rows[0].id);
+
+    res.json({
+      success: true,
+      message: 'Document încărcat cu succes',
+      document: result.rows[0]
     });
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ error: 'Failed to fetch documents' });
+    console.error('Upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Eroare la încărcarea documentului',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// DELETE /api/bookings/:bookingId/documents/:docId - Șterge document
+router.delete('/:bookingId/documents/:docId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { bookingId, docId } = req.params;
+    const userId = (req as any).userId;
+    const userRole = (req as any).userRole;
+    
+    // Get document
+    const docResult = await pool.query(
+      'SELECT * FROM documents WHERE id = $1 AND booking_id = $2',
+      [docId, bookingId]
+    );
+    
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Document negăsit' });
+    }
+    
+    const document = docResult.rows[0];
+    
+    // Check permissions
+    if (userRole !== 'admin' && document.user_id !== userId) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Nu ai permisiunea să ștergi acest document' 
+      });
+    }
+    
+    // Delete file from disk
+    if (fs.existsSync(document.path)) {
+      fs.unlinkSync(document.path);
+    }
+    
+    // Delete from database
+    await pool.query('DELETE FROM documents WHERE id = $1', [docId]);
+    
+    res.json({ 
+      success: true, 
+      message: 'Document șters cu succes' 
+    });
+  } catch (error) {
+    console.error('Delete error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Eroare la ștergerea documentului' 
+    });
+  }
+});
+
+// GET /api/bookings/:bookingId/documents/:docId/download - Descarcă document
+router.get('/:bookingId/documents/:docId/download', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { bookingId, docId } = req.params;
+    const userId = (req as any).userId;
+    const userRole = (req as any).userRole;
+    
+    // Get document with booking info
+    const docResult = await pool.query(
+      `SELECT d.*, b.client_email 
+       FROM documents d
+       JOIN client_bookings b ON d.booking_id = b.id
+       WHERE d.id = $1 AND d.booking_id = $2`,
+      [docId, bookingId]
+    );
+    
+    if (docResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Document negăsit' 
+      });
+    }
+    
+    const document = docResult.rows[0];
+    
+    // Check permissions
+    const userEmailResult = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
+    const userEmail = userEmailResult.rows[0]?.email;
+    
+    if (userRole !== 'admin' && document.client_email !== userEmail) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Nu ai permisiunea să descarci acest document' 
+      });
+    }
+    
+    const filePath = document.path;
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Fișierul nu a fost găsit pe server' 
+      });
+    }
+    
+    // Set headers for download
+    res.setHeader('Content-Disposition', `attachment; filename="${document.original_name}"`);
+    res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
+    
+    // Send file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Eroare la descărcarea documentului' 
+    });
   }
 });
 

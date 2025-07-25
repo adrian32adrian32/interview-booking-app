@@ -129,14 +129,17 @@ export default function BookingsPage() {
 
   const formatDate = (dateStr: string) => {
     try {
-      const date = new Date(dateStr + 'T00:00:00');
-      const options: Intl.DateTimeFormatOptions = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      // Pentru date în format YYYY-MM-DD, adaugă ora locală
+      const [year, month, day] = dateStr.split("-");
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       };
-      return date.toLocaleDateString('ro-RO', options);
+      return date.toLocaleDateString("ro-RO", options);
     } catch {
       return dateStr;
     }
@@ -171,12 +174,16 @@ export default function BookingsPage() {
   today.setHours(0, 0, 0, 0);
 
   const upcomingBookings = bookings.filter(b => {
-    const bookingDate = new Date(b.interview_date + 'T00:00:00');
+    const [year, month, day] = b.interview_date.split('-');
+    const bookingDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    bookingDate.setHours(0, 0, 0, 0);
     return bookingDate >= today && b.status !== 'cancelled';
   });
 
   const pastBookings = bookings.filter(b => {
-    const bookingDate = new Date(b.interview_date + 'T00:00:00');
+    const [year, month, day] = b.interview_date.split('-');
+    const bookingDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    bookingDate.setHours(0, 0, 0, 0);
     return bookingDate < today || b.status === 'cancelled';
   });
 

@@ -378,7 +378,7 @@ export default function StatisticsPage() {
             Evoluție Săptămânală
           </h2>
           <div className="h-64">
-            {stats.weeklyEvolution.length > 0 ? (
+            {stats.weeklyEvolution && stats.weeklyEvolution.length > 0 ? (
               <Line data={weeklyChartData} options={chartOptions} />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">

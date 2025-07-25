@@ -47,6 +47,7 @@
     --input: 215 27.9% 16.9%;
     --ring: 216 12.2% 83.9%;
   }
+
   .futuristic {
     --background: 220 40% 8%;
     --foreground: 180 100% 90%;
@@ -73,6 +74,7 @@
 body {
   @apply bg-background text-foreground;
 }
+
 /* Fix pentru inputuri în modul futuristic */
 .futuristic input,
 .futuristic textarea,
@@ -138,4 +140,238 @@ body {
 
 .futuristic ::-webkit-scrollbar-thumb:hover {
   background: #8b5cf6;
+}
+
+/* Futuristic theme overrides pentru componentele Tailwind */
+.futuristic {
+  background: hsl(var(--background));
+}
+
+/* Text colors overrides */
+.futuristic .text-gray-900,
+.futuristic .text-gray-800,
+.futuristic .text-gray-700,
+.futuristic .text-slate-900,
+.futuristic .text-slate-800,
+.futuristic .text-slate-700 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.futuristic .text-gray-600,
+.futuristic .text-gray-500,
+.futuristic .text-gray-400,
+.futuristic .text-slate-600,
+.futuristic .text-slate-500,
+.futuristic .text-slate-400 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+/* Background colors overrides */
+.futuristic .bg-white,
+.futuristic .bg-gray-50,
+.futuristic .bg-gray-100,
+.futuristic .bg-slate-50,
+.futuristic .bg-slate-100 {
+  background-color: hsl(var(--card)) !important;
+}
+
+.futuristic .bg-gray-200,
+.futuristic .bg-gray-300,
+.futuristic .bg-slate-200,
+.futuristic .bg-slate-300 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.futuristic .bg-gray-800,
+.futuristic .bg-gray-900,
+.futuristic .bg-gray-950,
+.futuristic .bg-slate-800,
+.futuristic .bg-slate-900,
+.futuristic .bg-slate-950 {
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Border colors overrides */
+.futuristic .border-gray-200,
+.futuristic .border-gray-300,
+.futuristic .border-slate-200,
+.futuristic .border-slate-300 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.futuristic .border-gray-700,
+.futuristic .border-gray-800,
+.futuristic .border-slate-700,
+.futuristic .border-slate-800 {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Hover states */
+.futuristic .hover\:bg-gray-50:hover,
+.futuristic .hover\:bg-gray-100:hover,
+.futuristic .hover\:bg-slate-50:hover,
+.futuristic .hover\:bg-slate-100:hover {
+  background-color: hsl(var(--accent)) !important;
+}
+
+.futuristic .hover\:bg-gray-700:hover,
+.futuristic .hover\:bg-gray-800:hover,
+.futuristic .hover\:bg-slate-700:hover,
+.futuristic .hover\:bg-slate-800:hover {
+  background-color: hsl(var(--secondary)) !important;
+}
+
+/* Shadow effects pentru futuristic */
+.futuristic .shadow-sm,
+.futuristic .shadow,
+.futuristic .shadow-md,
+.futuristic .shadow-lg {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* Button styles pentru futuristic */
+.futuristic button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.futuristic button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.futuristic button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.futuristic button:hover {
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Ring focus pentru futuristic */
+.futuristic .ring-2 {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+.futuristic .focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Table styles pentru futuristic */
+.futuristic table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.futuristic thead {
+  background-color: hsl(var(--muted));
+}
+
+.futuristic tbody tr {
+  transition: all 0.2s ease;
+}
+
+.futuristic tbody tr:hover {
+  background-color: hsl(var(--accent));
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+}
+
+/* Card effects pentru futuristic */
+.futuristic .rounded-lg,
+.futuristic .rounded-md {
+  position: relative;
+  overflow: hidden;
+}
+
+.futuristic .rounded-lg::after,
+.futuristic .rounded-md::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, transparent, hsl(var(--primary)), transparent);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.futuristic .rounded-lg:hover::after,
+.futuristic .rounded-md:hover::after {
+  opacity: 0.1;
+}
+
+/* Link styles pentru futuristic */
+.futuristic a {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.futuristic a:hover {
+  color: hsl(var(--primary));
+}
+
+/* Badge and alert fixes pentru futuristic */
+.futuristic .bg-green-100,
+.futuristic .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+.futuristic .text-green-800,
+.futuristic .text-green-700 {
+  color: #22c55e !important;
+}
+
+.futuristic .bg-yellow-100,
+.futuristic .bg-yellow-50 {
+  background-color: rgba(250, 204, 21, 0.1) !important;
+}
+
+.futuristic .text-yellow-800,
+.futuristic .text-yellow-700 {
+  color: #facc15 !important;
+}
+
+.futuristic .bg-red-100,
+.futuristic .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+.futuristic .text-red-800,
+.futuristic .text-red-700 {
+  color: #ef4444 !important;
+}
+
+.futuristic .bg-blue-100,
+.futuristic .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.futuristic .text-blue-800,
+.futuristic .text-blue-700,
+.futuristic .text-blue-600 {
+  color: #8b5cf6 !important;
+}
+
+.futuristic .bg-blue-600,
+.futuristic .bg-blue-700 {
+  background-color: hsl(var(--primary)) !important;
+}
+
+.futuristic .hover\:bg-blue-700:hover,
+.futuristic .hover\:bg-blue-800:hover {
+  background-color: hsl(var(--primary)) !important;
+  filter: brightness(0.9);
 }

@@ -10,13 +10,13 @@ export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [previewDoc, setPreviewDoc] = useState<any>(null);
-  
+
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -51,7 +51,7 @@ export default function ProfilePage() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get('/upload/documents');
+      const response = await axios.get('/upload/my-documents');
       if (response.data.success) {
         setDocuments(response.data.documents || []);
       }
@@ -63,7 +63,7 @@ export default function ProfilePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const response = await axios.put('/users/profile', {
         first_name: formData.first_name,
@@ -118,7 +118,7 @@ export default function ProfilePage() {
 
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true);
-    
+
     const formData = new FormData();
     formData.append('avatar', file);
 
@@ -187,12 +187,20 @@ export default function ProfilePage() {
 
   const handleDownload = async (doc: any) => {
     try {
-      const filename = doc.filename || doc.file_url?.split('/').pop();
-      if (filename) {
-        window.location.href = `/api/download/document/${filename}`;
-      } else {
-        toast.error('Numele fișierului lipsește');
-      }
+      const response = await axios.get(`/upload/download/${doc.id}`, {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.original_name || doc.file_name || 'document');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Document descărcat cu succes');
     } catch (error) {
       toast.error('Eroare la descărcarea documentului');
     }
@@ -223,9 +231,9 @@ export default function ProfilePage() {
             <div className="relative">
               <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 futuristic:bg-purple-800/30 flex items-center justify-center">
                 {getAvatarUrl() ? (
-                  <img 
-                    src={getAvatarUrl()!} 
-                    alt="Avatar" 
+                  <img
+                    src={getAvatarUrl()!}
+                    alt="Avatar"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -234,13 +242,13 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              
+
               {uploadingAvatar && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
                   <Loader2 className="w-6 h-6 text-white animate-spin" />
                 </div>
               )}
-              
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -249,7 +257,7 @@ export default function ProfilePage() {
               >
                 <Camera className="w-4 h-4" />
               </button>
-              
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -258,10 +266,10 @@ export default function ProfilePage() {
                 className="hidden"
               />
             </div>
-            
+
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">
-                {formData.first_name && formData.last_name 
+                {formData.first_name && formData.last_name
                   ? `${formData.first_name} ${formData.last_name}`
                   : user?.email
                 }
@@ -282,7 +290,7 @@ export default function ProfilePage() {
             <User className="h-5 w-5 mr-2" />
             Informații personale
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
@@ -297,7 +305,7 @@ export default function ProfilePage() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                 Prenume
@@ -335,7 +343,7 @@ export default function ProfilePage() {
             <Mail className="h-5 w-5 mr-2" />
             Informații cont
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
@@ -348,7 +356,7 @@ export default function ProfilePage() {
                 disabled
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
                 Rol
@@ -369,7 +377,7 @@ export default function ProfilePage() {
             <Bell className="h-5 w-5 mr-2" />
             Preferințe Notificări
           </h2>
-          
+
           <div className="space-y-4">
             {[
               { key: 'bookingConfirmed', label: 'Confirmare programare', desc: 'Primește email când programarea este confirmată' },
@@ -415,7 +423,7 @@ export default function ProfilePage() {
               {documents.length} document{documents.length !== 1 ? 'e' : ''}
             </span>
           </h2>
-          
+
           {/* Upload Document */}
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg p-6 text-center mb-4">
             <input
@@ -522,8 +530,8 @@ export default function ProfilePage() {
             </div>
             <div className="flex-1 overflow-auto p-4">
               {previewDoc.mime_type?.includes('image') || previewDoc.file_name?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                <img 
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`} 
+                <img
+                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
                   alt={previewDoc.original_name || previewDoc.file_name}
                   className="max-w-full mx-auto"
                 />

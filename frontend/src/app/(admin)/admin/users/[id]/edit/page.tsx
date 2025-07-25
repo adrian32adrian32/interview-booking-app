@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import axios from '@/lib/axios';
+import axios, { API_URL } from '@/lib/axios';
 import toast from 'react-hot-toast';
-import { ArrowLeft, FileText, Eye, Download, X, Calendar, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Eye, Download, X, Calendar, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 
 export default function EditUserPage() {
   const params = useParams();
@@ -27,7 +27,7 @@ export default function EditUserPage() {
 
   useEffect(() => {
     fetchUser();
-    fetchDocuments();
+    fetchAllDocuments();
   }, []);
 
   const fetchUser = async () => {
@@ -54,13 +54,29 @@ export default function EditUserPage() {
     }
   };
 
-  const fetchDocuments = async () => {
+  const fetchAllDocuments = async () => {
     try {
       const res = await axios.get(`/users/${params.id}/documents`);
       setDocuments(res.data.documents || []);
+      
+      // Log statistici dacă sunt disponibile
+      if (res.data.stats) {
+        console.log('Statistici documente:', res.data.stats);
+      }
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      console.error('Error fetching all documents:', error);
     }
+  };
+
+  const getDocumentUrl = (doc: any) => {
+    // Dacă file_url începe cu http, folosește-l direct
+    if (doc.file_url?.startsWith('http')) {
+      return doc.file_url;
+    }
+    
+    // Altfel, construiește URL-ul complet
+    const baseUrl = API_URL.replace('/api', ''); // Elimină /api din URL
+    return `${baseUrl}${doc.file_url || `/uploads/documents/${doc.filename}`}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +129,7 @@ export default function EditUserPage() {
 
       if (res.data.success) {
         toast.success('Document încărcat cu succes!');
-        fetchDocuments(); // Reîncarcă lista de documente
+        fetchAllDocuments(); // Reîncarcă lista de documente
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -129,7 +145,7 @@ export default function EditUserPage() {
     try {
       await axios.delete(`/upload/document/${docId}`);
       toast.success('Document șters cu succes!');
-      fetchDocuments();
+      fetchAllDocuments();
     } catch (error) {
       toast.error('Eroare la ștergerea documentului');
     }
@@ -137,15 +153,32 @@ export default function EditUserPage() {
 
   const handleDownload = async (doc: any) => {
     try {
-      const filename = doc.filename || doc.file_url?.split('/').pop();
-      if (filename) {
-        window.location.href = `/api/download/document/${filename}`;
-      } else {
-        toast.error('Numele fișierului lipsește');
-      }
+      const response = await axios.get(`/upload/download/${doc.id}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.original_name || doc.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Document descărcat cu succes');
     } catch (error) {
+      console.error('Download error:', error);
       toast.error('Eroare la descărcarea documentului');
     }
+  };
+
+  const handlePreview = (doc: any) => {
+    const fileUrl = getDocumentUrl(doc);
+    setPreviewDoc({
+      ...doc,
+      previewUrl: fileUrl
+    });
   };
 
   if (loading) return (
@@ -295,7 +328,7 @@ export default function EditUserPage() {
         {/* Documente */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Documente</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Toate Documentele</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">
               {documents.length} document{documents.length !== 1 ? 'e' : ''}
             </span>
@@ -326,51 +359,90 @@ export default function EditUserPage() {
 
           {/* Lista documente */}
           {documents.length > 0 ? (
-            <div className="space-y-2">
-              {documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30 rounded bg-gray-50 dark:bg-gray-700/50 futuristic:bg-purple-800/20">
-                  <div className="flex items-center flex-1">
-                    <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 futuristic:text-purple-400 mr-2" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">
-                        {doc.original_name || doc.file_name || doc.filename}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">
-                        {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')} - 
-                        <span className="ml-1">
-                          {doc.upload_source || (doc.uploaded_by === 'admin' ? 'Încărcat de admin' : 'Încărcat de user')}
-                        </span>
-                        {doc.verified_by_admin && (
-                          <span className="ml-2 text-green-600 dark:text-green-400">✓ Verificat</span>
+            <div className="space-y-3">
+              {documents.map((doc) => {
+                const isImage = doc.mime_type?.startsWith('image/');
+                const isPDF = doc.mime_type === 'application/pdf';
+                const fileUrl = getDocumentUrl(doc);
+                
+                return (
+                  <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30 rounded-lg bg-gray-50 dark:bg-gray-700/50 futuristic:bg-purple-800/20 hover:bg-gray-100 dark:hover:bg-gray-700/70 transition-colors">
+                    <div className="flex items-center min-w-0 flex-1">
+                      {/* Thumbnail preview pentru imagini */}
+                      <div className="flex-shrink-0">
+                        {isImage ? (
+                          <div 
+                            className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-600 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => handlePreview(doc)}
+                          >
+                            <img 
+                              src={fileUrl}
+                              alt={doc.original_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg></div>';
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                            {isPDF ? (
+                              <FileText className="w-8 h-8 text-red-500" />
+                            ) : (
+                              <FileText className="w-8 h-8 text-gray-400" />
+                            )}
+                          </div>
                         )}
-                      </p>
+                      </div>
+                      
+                      <div className="ml-4 min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 truncate">
+                          {doc.original_name || doc.file_name || doc.filename}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">
+                          {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')} • 
+                          {' '}{doc.upload_source || 'Documente profil'}
+                          {doc.verified_by_admin && (
+                            <span className="ml-2 text-green-600 dark:text-green-400">✓ Verificat</span>
+                          )}
+                        </p>
+                        {doc.source_type && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            Tip: {doc.doc_type || doc.type} • 
+                            {' '}{doc.source_type === 'booking' ? 'Programare' : 'Profil'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <button
+                        onClick={() => handlePreview(doc)}
+                        className="p-2 text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:bg-blue-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Vizualizează"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="p-2 text-green-600 dark:text-green-400 futuristic:text-green-400 hover:bg-green-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Descarcă"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDocument(doc.id)}
+                        className="p-2 text-red-600 dark:text-red-400 futuristic:text-red-400 hover:bg-red-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        title="Șterge"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPreviewDoc(doc)}
-                      className="text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
-                      title="Vizualizează"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDownload(doc)}
-                      className="text-green-600 dark:text-green-400 futuristic:text-green-400 hover:text-green-800 dark:hover:text-green-300"
-                      title="Descarcă"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDocument(doc.id)}
-                      className="text-red-600 dark:text-red-400 futuristic:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                      title="Șterge"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50 text-center py-4">
@@ -382,8 +454,8 @@ export default function EditUserPage() {
 
       {/* Modal Preview Document */}
       {previewDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/95 rounded-lg max-w-5xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/95 rounded-lg max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">
                 {previewDoc.original_name || previewDoc.file_name || previewDoc.filename}
@@ -395,31 +467,36 @@ export default function EditUserPage() {
                 <X className="w-5 h-5 text-gray-600 dark:text-gray-400 futuristic:text-cyan-200" />
               </button>
             </div>
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto p-4 bg-gray-50 dark:bg-gray-900 futuristic:bg-purple-950/50">
               {previewDoc.mime_type?.includes('image') || previewDoc.file_name?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                <img 
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`} 
-                  alt={previewDoc.original_name || previewDoc.file_name}
-                  className="max-w-full mx-auto"
-                />
+                <div className="flex items-center justify-center h-full">
+                  <img 
+                    src={previewDoc.previewUrl}
+                    alt={previewDoc.original_name || previewDoc.file_name}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                  />
+                </div>
               ) : previewDoc.mime_type?.includes('pdf') || previewDoc.file_name?.match(/\.pdf$/i) ? (
                 <iframe
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
-                  className="w-full h-[70vh]"
+                  src={previewDoc.previewUrl}
+                  className="w-full h-full min-h-[600px] rounded-lg"
                   title={previewDoc.original_name || previewDoc.file_name}
                 />
               ) : (
                 <div className="text-center py-20">
                   <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 futuristic:text-purple-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-200">
+                  <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-200 mb-2">
                     Previzualizarea nu este disponibilă pentru acest tip de fișier
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/70 mb-4">
+                    Tip fișier: {previewDoc.mime_type || 'Necunoscut'}
                   </p>
                   <button
                     onClick={() => {
                       handleDownload(previewDoc);
                       setPreviewDoc(null);
                     }}
-                    className="mt-4 bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 transition-colors"
+                    className="mt-4 bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 transition-colors"
                   >
                     Descarcă pentru vizualizare
                   </button>

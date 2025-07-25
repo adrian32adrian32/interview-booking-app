@@ -1,7 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138:5000/api';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138:5000/api';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,

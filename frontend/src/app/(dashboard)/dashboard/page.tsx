@@ -145,7 +145,7 @@ export default function DashboardPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload/documents`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/upload/my-documents`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

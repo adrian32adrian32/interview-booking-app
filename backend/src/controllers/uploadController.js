@@ -3,6 +3,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../config/database');
 
@@ -28,7 +29,9 @@ const fileFilter = (req, file, cb) => {
   const allowedTypes = {
     'buletin': ['image/jpeg', 'image/png', 'image/jpg'],
     'selfie': ['image/jpeg', 'image/png', 'image/jpg'],
-    'cv': ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+    'cv': ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
+    'diploma': ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
+    'adeverinta': ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
   };
 
   const documentType = req.body.type || req.query.type;
@@ -183,7 +186,7 @@ const getUserDocuments = async (req, res) => {
     const userId = req.user.id;
     
     const result = await pool.query(
-      `SELECT id, type, original_name, size, mime_type, status, uploaded_at 
+      `SELECT id, type, original_name, filename, size, mime_type, status, uploaded_at 
        FROM documents 
        WHERE user_id = $1 AND status != $2 
        ORDER BY uploaded_at DESC`,
@@ -248,41 +251,103 @@ const deleteDocument = async (req, res) => {
   }
 };
 
-// Download document (pentru utilizator)
+// Download document (pentru utilizator) - FUNCȚIE ACTUALIZATĂ
 const downloadDocument = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
 
-    const document = await pool.query(
-      'SELECT * FROM documents WHERE id = $1 AND user_id = $2 AND status != $3',
-      [id, userId, 'deleted']
-    );
+    // Pentru admin, permite descărcarea oricărui document
+    let query = 'SELECT * FROM documents WHERE id = $1';
+    let params = [id];
+    
+    if (req.user.role !== 'admin') {
+      query += ' AND user_id = $2';
+      params.push(userId);
+    }
+    
+    query += ' AND status != $' + (params.length + 1);
+    params.push('deleted');
+
+    const document = await pool.query(query, params);
 
     if (document.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Document negăsit'
+        message: 'Document negăsit sau nu ai permisiunea să-l accesezi'
       });
     }
 
     const doc = document.rows[0];
-    const fileExists = await fs.access(doc.path).then(() => true).catch(() => false);
+    
+    // Verifică diferite căi posibile pentru fișier
+    let filePath = doc.path;
+    
+    // Dacă nu există calea sau fișierul, încearcă să o construiască
+    if (!filePath || !fsSync.existsSync(filePath)) {
+      // Încearcă cu filename
+      if (doc.filename) {
+        filePath = path.join(__dirname, '../../uploads/documents', doc.type, doc.filename);
+      }
+      // Încearcă cu file_name
+      else if (doc.file_name) {
+        filePath = path.join(__dirname, '../../uploads/documents', doc.type, doc.file_name);
+      }
+      
+      // Încearcă fără subfolder type
+      if (!fsSync.existsSync(filePath)) {
+        if (doc.filename) {
+          filePath = path.join(__dirname, '../../uploads/documents', doc.filename);
+        } else if (doc.file_name) {
+          filePath = path.join(__dirname, '../../uploads/documents', doc.file_name);
+        }
+      }
+    }
 
-    if (!fileExists) {
+    // Verifică dacă fișierul există
+    if (!fsSync.existsSync(filePath)) {
+      console.error('File not found at any path. Document data:', {
+        id: doc.id,
+        path: doc.path,
+        filename: doc.filename,
+        file_name: doc.file_name,
+        type: doc.type,
+        tried_path: filePath
+      });
+      
       return res.status(404).json({
         success: false,
         message: 'Fișierul nu mai există pe server'
       });
     }
 
-    res.download(doc.path, doc.original_name);
+    console.log('Downloading file from:', filePath);
+
+    // Setează headers pentru download
+    res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${doc.original_name || 'document'}"`);
+    
+    // Trimite fișierul
+    res.sendFile(path.resolve(filePath), (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: 'Eroare la trimiterea fișierului'
+          });
+        }
+      }
+    });
+    
   } catch (error) {
     console.error('Eroare download document:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Eroare la descărcarea documentului' 
-    });
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Eroare la descărcarea documentului' 
+      });
+    }
   }
 };
 

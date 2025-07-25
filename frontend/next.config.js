@@ -14,6 +14,15 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/admin/stats',
+        destination: '/admin/statistics',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

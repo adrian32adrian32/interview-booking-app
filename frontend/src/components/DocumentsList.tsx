@@ -1,195 +1,216 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import api from '@/lib/axios';
+import React, { useState } from 'react';
+import { Eye, Download, Trash2, FileText, Image as ImageIcon, X } from 'lucide-react';
+import { API_URL } from '@/lib/axios';
 
 interface Document {
-  id: string;
-  document_type: string;
+  id: number;
+  type: string;
+  filename: string;
+  original_name: string;
+  file_url: string;
   file_name: string;
-  file_size: number;
+  size: number;
+  mime_type: string;
+  status: string;
   uploaded_at: string;
-  verified_at: string | null;
-  verified_by: string | null;
+  upload_source?: string;
 }
 
-export default function DocumentsList() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+interface DocumentsListProps {
+  documents: Document[];
+  onDelete?: (id: number) => void;
+  onRefresh?: () => void;
+}
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+export default function DocumentsList({ documents, onDelete, onRefresh }: DocumentsListProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState<number | null>(null);
 
-  const loadDocuments = async () => {
+  const handleDownload = async (doc: Document) => {
     try {
-      const response = await api.get("/upload/documents");
-      if (response.success) {
-        setDocuments(response.data);
-      } else {
-        setError('Eroare la încărcarea documentelor');
-      }
-    } catch {
-      setError('Eroare de conexiune');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    else if (bytes < 1048576) return Math.round(bytes / 1024) + ' KB';
-    else return Math.round(bytes / 1048576) + ' MB';
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ro-RO', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getDocumentTypeLabel = (type: string) => {
-    const labels: { [key: string]: string } = {
-      'id_front': 'Buletin - Față',
-      'id_back': 'Buletin - Verso',
-      'selfie': 'Selfie cu buletinul',
-      'other': 'Alt document'
-    };
-    return labels[type] || type;
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Ești sigur că vrei să ștergi acest document?')) return;
-
-    try {
-      const response = await api.delete(`/upload/document/${id}`);
-      if (response.success) {
-        setDocuments(documents.filter(doc => doc.id !== id));
-      } else {
-        alert('Eroare la ștergerea documentului');
-      }
-    } catch {
-      alert('Eroare de conexiune');
-    }
-  };
-
-  const handleDownload = async (id: string, fileName: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${"/api" || 'http://94.156.250.138/api'}/users/documents/${id}/download`, {
+      setLoading(doc.id);
+      
+      const response = await fetch(`${API_URL}/api/upload/download/${doc.id}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Eroare la descărcarea documentului');
-      }
-    } catch {
-      alert('Eroare de conexiune');
+      
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.original_name || doc.filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Eroare la descărcarea documentului');
+    } finally {
+      setLoading(null);
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-4">Se încarcă...</div>;
-  }
+  const handleDelete = async (id: number) => {
+    if (!confirm('Sigur vrei să ștergi acest document?')) return;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/upload/document/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Delete failed');
+      
+      if (onDelete) onDelete(id);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Eroare la ștergerea documentului');
+    }
+  };
 
-  if (error) {
-    return <div className="text-red-600 text-center py-4">{error}</div>;
-  }
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType?.startsWith('image/')) {
+      return <ImageIcon className="w-8 h-8 text-blue-400" />;
+    }
+    return <FileText className="w-8 h-8 text-gray-400" />;
+  };
+
+  const getDocumentUrl = (doc: Document) => {
+    if (doc.file_url?.startsWith('http')) {
+      return doc.file_url;
+    }
+    return `${API_URL}${doc.file_url || `/uploads/documents/${doc.filename}`}`;
+  };
 
   if (documents.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Nu ai încărcat încă niciun document.
+      <div className="text-center py-8 text-gray-400">
+        Nu ai documente încărcate încă.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-      <table className="min-w-full divide-y divide-gray-300">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tip Document
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Nume Fișier
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Dimensiune
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Data Încărcare
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="relative px-6 py-3">
-              <span className="sr-only">Acțiuni</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {documents.map((doc) => (
-            <tr key={doc.id}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {getDocumentTypeLabel(doc.document_type)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {doc.file_name}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatFileSize(doc.file_size)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatDate(doc.uploaded_at)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {doc.verified_at ? (
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Verificat
-                  </span>
-                ) : (
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                    În așteptare
-                  </span>
+    <>
+      <div className="space-y-4">
+        {documents.map((doc) => {
+          const isImage = doc.mime_type?.startsWith('image/');
+          const documentUrl = getDocumentUrl(doc);
+          
+          return (
+            <div key={doc.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between hover:bg-gray-750 transition-colors">
+              <div className="flex items-center space-x-4">
+                {/* Thumbnail/Icon */}
+                <div className="flex-shrink-0">
+                  {isImage ? (
+                    <div className="w-16 h-16 bg-gray-700 rounded overflow-hidden">
+                      <img 
+                        src={documentUrl}
+                        alt={doc.original_name}
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setPreviewUrl(documentUrl)}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center"><svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-700 rounded flex items-center justify-center">
+                      {getFileIcon(doc.mime_type)}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Document Info */}
+                <div className="flex-grow">
+                  <h4 className="font-medium text-white">{doc.original_name || doc.file_name}</h4>
+                  <p className="text-sm text-gray-400">
+                    {doc.type === 'identity' && 'Carte de Identitate'}
+                    {doc.type === 'selfie' && 'Selfie cu Buletinul'}
+                    {doc.type === 'cv' && 'CV'}
+                    {doc.type === 'other' && 'Alt document'}
+                    {' • '}
+                    {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')}
+                    {doc.upload_source && ` • ${doc.upload_source}`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(doc.size / 1024 / 1024).toFixed(2)} MB
+                    {doc.mime_type && ` • ${doc.mime_type.split('/')[1].toUpperCase()}`}
+                    {doc.status && ` • ${doc.status === 'verified' ? '✓ Verificat' : 'În așteptare'}`}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Actions */}
+              <div className="flex items-center space-x-2">
+                {isImage && (
+                  <button
+                    onClick={() => setPreviewUrl(documentUrl)}
+                    className="p-2 text-blue-400 hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Vizualizează"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </button>
                 )}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                
                 <button
-                  onClick={() => handleDownload(doc.id, doc.file_name)}
-                  className="text-indigo-600 hover:text-indigo-900 mr-3"
+                  onClick={() => handleDownload(doc)}
+                  disabled={loading === doc.id}
+                  className="p-2 text-green-400 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                  title="Descarcă"
                 >
-                  Descarcă
+                  <Download className={`w-5 h-5 ${loading === doc.id ? 'animate-pulse' : ''}`} />
                 </button>
+                
                 <button
                   onClick={() => handleDelete(doc.id)}
-                  className="text-red-600 hover:text-red-900"
+                  className="p-2 text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Șterge"
                 >
-                  Șterge
+                  <Trash2 className="w-5 h-5" />
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Image Preview Modal */}
+      {previewUrl && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewUrl(null);
+              }}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            
+            <img 
+              src={previewUrl}
+              alt="Preview"
+              className="max-w-full max-h-[90vh] w-auto h-auto mx-auto rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

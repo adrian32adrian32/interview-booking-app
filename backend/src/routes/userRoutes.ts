@@ -5,6 +5,14 @@ import bcrypt from 'bcryptjs';
 
 const router = Router();
 
+// Interface pentru request cu user
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    role: string;
+  };
+}
+
 // Middleware pentru verificare admin
 const adminMiddleware = async (req: Request, res: Response, next: Function) => {
   try {
@@ -23,6 +31,7 @@ const adminMiddleware = async (req: Request, res: Response, next: Function) => {
     }
 
     (req as any).adminId = userId;
+    (req as any).user = { id: userId, role: 'admin' };
     next();
   } catch (error) {
     return res.status(401).json({ success: false, message: 'Token invalid' });
@@ -237,27 +246,60 @@ router.delete('/:id', adminMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Get user documents (admin)
-router.get('/:userId/documents', adminMiddleware, async (req: Request, res: Response) => {
+// Get user documents with booking info - ACTUALIZAT
+router.get('/:id/documents', adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { userId } = req.params;
-
-    const result = await pool.query(
-      `SELECT *, 
+    const userId = parseInt(req.params.id);
+    
+    // Obține toate documentele utilizatorului cu informații despre sursa lor
+    const documentsResult = await pool.query(`
+      SELECT 
+        d.*,
+        cb.id as booking_ref,
+        cb.interview_date,
+        cb.status as booking_status,
         CASE 
-          WHEN uploaded_by = 'admin' THEN 'Admin'
+          WHEN d.booking_id IS NOT NULL THEN 
+            'Programare #' || d.booking_id || ' - ' || TO_CHAR(cb.interview_date, 'DD.MM.YYYY')
+          ELSE 'Documente profil'
+        END as upload_source,
+        CASE 
+          WHEN d.booking_id IS NOT NULL THEN 'booking'
+          ELSE 'profile'
+        END as source_type,
+        CASE 
+          WHEN d.uploaded_by = 'admin' THEN 'Admin'
           ELSE 'User'
-        END as upload_source
+        END as uploaded_by_role
+      FROM documents d
+      LEFT JOIN client_bookings cb ON d.booking_id = cb.id
+      WHERE d.user_id = $1
+      ORDER BY d.uploaded_at DESC
+    `, [userId]);
+    
+    // Obține statistici despre documente
+    const statsResult = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN booking_id IS NULL THEN 1 ELSE 0 END) as profile_docs,
+        SUM(CASE WHEN booking_id IS NOT NULL THEN 1 ELSE 0 END) as booking_docs,
+        SUM(CASE WHEN status = 'verified' OR verified_by_admin = true THEN 1 ELSE 0 END) as verified_docs
       FROM documents 
-      WHERE user_id = $1 
-      ORDER BY uploaded_at DESC`,
-      [userId]
-    );
-
-    res.json({ success: true, documents: result.rows });
+      WHERE user_id = $1
+    `, [userId]);
+    
+    res.json({ 
+      success: true, 
+      documents: documentsResult.rows,
+      stats: statsResult.rows[0],
+      user_id: userId
+    });
   } catch (error) {
-    console.error('Get user documents error:', error);
-    res.status(500).json({ success: false, message: 'Eroare la obținerea documentelor' });
+    console.error('Error fetching user documents:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to fetch documents' 
+    });
   }
 });
 
