@@ -87,7 +87,6 @@ export default function CalendarPage() {
     const dayBookings = bookings.filter(b => b.interview_date.startsWith(dateStr));
     setDayBookings(dayBookings);
 
-    // Calculează sloturile disponibile
     const bookedTimes = dayBookings.map(b => b.interview_time);
     const slots = timeSlots.map(time => ({
       time,
@@ -112,39 +111,39 @@ export default function CalendarPage() {
   };
 
   const getDayClass = (date: Date) => {
-    const baseClass = "relative h-24 p-2 border border-gray-200 transition-all cursor-pointer ";
+    const baseClass = "relative h-24 p-2 border transition-all cursor-pointer ";
     const dayBookings = getBookingsForDate(date);
     
     if (!isSameMonth(date, currentDate)) {
-      return baseClass + "bg-gray-50 text-gray-400";
+      return baseClass + "bg-gray-50 dark:bg-gray-900 futuristic:bg-gray-950/50 text-gray-400 dark:text-gray-600 border-gray-200 dark:border-gray-700 futuristic:border-cyan-500/10";
     }
     
     if (isToday(date)) {
-      return baseClass + "bg-blue-50 border-blue-300";
+      return baseClass + "bg-blue-50 dark:bg-blue-900/20 futuristic:bg-cyan-500/10 border-blue-300 dark:border-blue-600 futuristic:border-cyan-400 futuristic:shadow-[0_0_15px_rgba(6,182,212,0.3)]";
     }
     
     if (isPast(date) && !isToday(date)) {
-      return baseClass + "bg-gray-50";
+      return baseClass + "bg-gray-50 dark:bg-gray-900/50 futuristic:bg-gray-950/30 border-gray-200 dark:border-gray-700 futuristic:border-cyan-500/10";
     }
     
     if (dayBookings.length > 0) {
       const hasPending = dayBookings.some(b => b.status === 'pending');
       if (hasPending) {
-        return baseClass + "bg-yellow-50 border-yellow-300";
+        return baseClass + "bg-yellow-50 dark:bg-yellow-900/20 futuristic:bg-yellow-500/10 border-yellow-300 dark:border-yellow-600 futuristic:border-yellow-400";
       }
-      return baseClass + "bg-green-50 border-green-300";
+      return baseClass + "bg-green-50 dark:bg-green-900/20 futuristic:bg-green-500/10 border-green-300 dark:border-green-600 futuristic:border-green-400";
     }
     
-    return baseClass + "bg-white hover:bg-gray-50";
+    return baseClass + "bg-white dark:bg-gray-800 futuristic:bg-gray-900/50 hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/5 border-gray-200 dark:border-gray-700 futuristic:border-cyan-500/20";
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-green-500';
-      case 'pending': return 'bg-yellow-500';
-      case 'cancelled': return 'bg-red-500';
-      case 'completed': return 'bg-gray-500';
-      default: return 'bg-blue-500';
+      case 'confirmed': return 'bg-green-500 dark:bg-green-600 futuristic:bg-green-400';
+      case 'pending': return 'bg-yellow-500 dark:bg-yellow-600 futuristic:bg-yellow-400';
+      case 'cancelled': return 'bg-red-500 dark:bg-red-600 futuristic:bg-red-400';
+      case 'completed': return 'bg-gray-500 dark:bg-gray-600 futuristic:bg-gray-400';
+      default: return 'bg-blue-500 dark:bg-blue-600 futuristic:bg-blue-400';
     }
   };
 
@@ -200,7 +199,6 @@ export default function CalendarPage() {
     const monthEnd = endOfMonth(currentDate);
     const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    // Adaugă zile din luna anterioară pentru a completa săptămâna
     const startDay = getDay(monthStart);
     const previousMonthDays = [];
     if (startDay !== 1) {
@@ -213,10 +211,10 @@ export default function CalendarPage() {
     const allDays = [...previousMonthDays, ...days];
 
     return (
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="grid grid-cols-7 gap-0 border-b">
+      <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm">
+        <div className="grid grid-cols-7 gap-0 border-b dark:border-gray-700 futuristic:border-cyan-500/20">
           {['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'].map(day => (
-            <div key={day} className="p-3 text-center text-sm font-medium text-gray-700 border-r last:border-r-0">
+            <div key={day} className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-300 border-r dark:border-gray-700 futuristic:border-cyan-500/20 last:border-r-0">
               {day}
             </div>
           ))}
@@ -233,11 +231,15 @@ export default function CalendarPage() {
                 onClick={() => handleDateClick(date)}
               >
                 <div className="flex justify-between items-start">
-                  <span className={`text-sm font-medium ${isToday(date) ? 'text-blue-600' : ''}`}>
+                  <span className={`text-sm font-medium ${
+                    isToday(date) 
+                      ? 'text-blue-600 dark:text-blue-400 futuristic:text-cyan-400' 
+                      : 'dark:text-gray-200'
+                  }`}>
                     {format(date, 'd')}
                   </span>
                   {dayBookings.length > 0 && (
-                    <span className="text-xs bg-gray-800 text-white px-1.5 py-0.5 rounded-full">
+                    <span className="text-xs bg-gray-800 dark:bg-gray-700 futuristic:bg-cyan-500/20 text-white px-1.5 py-0.5 rounded-full">
                       {dayBookings.length}
                     </span>
                   )}
@@ -254,7 +256,7 @@ export default function CalendarPage() {
                       </div>
                     ))}
                     {dayBookings.length > 2 && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
                         +{dayBookings.length - 2} altele
                       </div>
                     )}
@@ -273,15 +275,15 @@ export default function CalendarPage() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b">
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/95 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/30 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b dark:border-gray-700 futuristic:border-cyan-500/20">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">
+              <h2 className="text-xl font-bold dark:text-white futuristic:text-cyan-300">
                 {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: ro })}
               </h2>
               <button
                 onClick={() => setShowDayDetails(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 <XCircle className="h-6 w-6" />
               </button>
@@ -289,25 +291,25 @@ export default function CalendarPage() {
             <div className="mt-2 flex gap-4 text-sm">
               <span className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                {dayBookings.filter(b => b.status === 'confirmed').length} confirmate
+                <span className="dark:text-gray-300">{dayBookings.filter(b => b.status === 'confirmed').length} confirmate</span>
               </span>
               <span className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                {dayBookings.filter(b => b.status === 'pending').length} în așteptare
+                <span className="dark:text-gray-300">{dayBookings.filter(b => b.status === 'pending').length} în așteptare</span>
               </span>
               <span className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
-                {availableSlots.filter(s => s.available).length} sloturi libere
+                <span className="dark:text-gray-300">{availableSlots.filter(s => s.available).length} sloturi libere</span>
               </span>
             </div>
           </div>
 
           <div className="p-6">
             <div className="mb-4 flex justify-between items-center">
-              <h3 className="font-medium text-gray-900">Program zi</h3>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-300">Program zi</h3>
               <button
                 onClick={() => handleQuickAction('new')}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 futuristic:bg-cyan-500 futuristic:hover:bg-cyan-600"
               >
                 <Plus className="h-4 w-4" />
                 Adaugă programare
@@ -323,10 +325,12 @@ export default function CalendarPage() {
                   <div
                     key={time}
                     className={`flex items-center p-3 rounded-lg border ${
-                      booking ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-200'
+                      booking 
+                        ? 'bg-gray-50 dark:bg-gray-700/50 futuristic:bg-cyan-500/10 border-gray-300 dark:border-gray-600 futuristic:border-cyan-500/20' 
+                        : 'bg-white dark:bg-gray-800 futuristic:bg-gray-900/50 border-gray-200 dark:border-gray-700 futuristic:border-cyan-500/10'
                     }`}
                   >
-                    <div className="w-20 text-sm font-medium text-gray-600">
+                    <div className="w-20 text-sm font-medium text-gray-600 dark:text-gray-400 futuristic:text-cyan-400">
                       {time}
                     </div>
                     
@@ -334,8 +338,8 @@ export default function CalendarPage() {
                       <div className="flex-1 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div>
-                            <p className="font-medium text-gray-900">{booking.client_name}</p>
-                            <p className="text-sm text-gray-500">{booking.client_email}</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-300">{booking.client_name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{booking.client_email}</p>
                           </div>
                           <div className="flex items-center gap-2">
                             {booking.interview_type === 'online' ? (
@@ -344,9 +348,9 @@ export default function CalendarPage() {
                               <MapPin className="h-4 w-4 text-green-500" />
                             )}
                             <span className={`px-2 py-0.5 text-xs rounded-full ${
-                              booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
+                              booking.status === 'confirmed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300' :
+                              booking.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300' :
+                              'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300'
                             }`}>
                               {booking.status === 'confirmed' ? 'Confirmat' :
                                booking.status === 'pending' ? 'În așteptare' : 'Anulat'}
@@ -356,7 +360,7 @@ export default function CalendarPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleQuickAction('view', booking.id)}
-                            className="p-1 text-gray-400 hover:text-gray-600"
+                            className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -364,10 +368,10 @@ export default function CalendarPage() {
                       </div>
                     ) : (
                       <div className="flex-1 flex items-center justify-between">
-                        <span className="text-sm text-gray-400">Slot disponibil</span>
+                        <span className="text-sm text-gray-400 dark:text-gray-500">Slot disponibil</span>
                         <button
                           onClick={() => handleQuickAction('new')}
-                          className="text-sm text-blue-600 hover:text-blue-800"
+                          className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 futuristic:text-cyan-400 futuristic:hover:text-cyan-300"
                         >
                           Rezervă
                         </button>
@@ -386,7 +390,7 @@ export default function CalendarPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 futuristic:border-cyan-400"></div>
       </div>
     );
   }
@@ -396,29 +400,29 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calendar Programări</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white futuristic:text-cyan-300">Calendar Programări</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-400/70 mt-1">
             Vizualizează și gestionează toate programările
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => fetchBookings()}
-            className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 border border-gray-300 dark:border-gray-600 futuristic:border-cyan-500/30 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 dark:text-white futuristic:text-cyan-300"
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Reîncarcă
           </button>
           <button
             onClick={exportCalendar}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="flex items-center px-4 py-2 bg-green-600 dark:bg-green-700 futuristic:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-800 futuristic:hover:bg-green-600"
           >
             <Download className="h-4 w-4 mr-2" />
             Export
           </button>
           <button
             onClick={() => router.push('/admin/bookings/new')}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center px-4 py-2 bg-blue-600 dark:bg-blue-700 futuristic:bg-cyan-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 futuristic:hover:bg-cyan-600"
           >
             <Plus className="h-4 w-4 mr-2" />
             Programare nouă
@@ -427,27 +431,27 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar Controls */}
-      <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm p-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 rounded-lg transition-colors"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5 dark:text-gray-300 futuristic:text-cyan-400" />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white futuristic:text-cyan-300">
               {format(currentDate, 'MMMM yyyy', { locale: ro })}
             </h2>
             <button
               onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 rounded-lg transition-colors"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-5 w-5 dark:text-gray-300 futuristic:text-cyan-400" />
             </button>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 futuristic:bg-cyan-500/20 hover:bg-gray-200 dark:hover:bg-gray-600 futuristic:hover:bg-cyan-500/30 rounded-lg transition-colors dark:text-gray-300 futuristic:text-cyan-300"
             >
               Astăzi
             </button>
@@ -457,7 +461,9 @@ export default function CalendarPage() {
             <button
               onClick={() => setViewMode('month')}
               className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'month' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                viewMode === 'month' 
+                  ? 'bg-blue-100 dark:bg-blue-900/50 futuristic:bg-cyan-500/30 text-blue-600 dark:text-blue-300 futuristic:text-cyan-300' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 dark:text-gray-400 futuristic:text-cyan-400'
               }`}
               title="Vizualizare lunară"
             >
@@ -466,7 +472,9 @@ export default function CalendarPage() {
             <button
               onClick={() => setViewMode('week')}
               className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'week' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                viewMode === 'week' 
+                  ? 'bg-blue-100 dark:bg-blue-900/50 futuristic:bg-cyan-500/30 text-blue-600 dark:text-blue-300 futuristic:text-cyan-300' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 dark:text-gray-400 futuristic:text-cyan-400'
               }`}
               title="Vizualizare săptămânală"
             >
@@ -475,7 +483,9 @@ export default function CalendarPage() {
             <button
               onClick={() => setViewMode('day')}
               className={`p-2 rounded-lg transition-colors ${
-                viewMode === 'day' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-100'
+                viewMode === 'day' 
+                  ? 'bg-blue-100 dark:bg-blue-900/50 futuristic:bg-cyan-500/30 text-blue-600 dark:text-blue-300 futuristic:text-cyan-300' 
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-cyan-500/10 dark:text-gray-400 futuristic:text-cyan-400'
               }`}
               title="Vizualizare zilnică"
             >
@@ -493,63 +503,63 @@ export default function CalendarPage() {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total luna aceasta</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-400/70">Total luna aceasta</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white futuristic:text-cyan-300">
                 {bookings.filter(b => {
                   const bookingDate = parseISO(b.interview_date);
                   return isSameMonth(bookingDate, currentDate);
                 }).length}
               </p>
             </div>
-            <Calendar className="h-8 w-8 text-blue-500" />
+            <Calendar className="h-8 w-8 text-blue-500 dark:text-blue-400 futuristic:text-cyan-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Confirmate</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-400/70">Confirmate</p>
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400 futuristic:text-green-400">
                 {bookings.filter(b => {
                   const bookingDate = parseISO(b.interview_date);
                   return isSameMonth(bookingDate, currentDate) && b.status === 'confirmed';
                 }).length}
               </p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <CheckCircle className="h-8 w-8 text-green-500 dark:text-green-400 futuristic:text-green-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">În așteptare</p>
-              <p className="text-2xl font-bold text-yellow-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-400/70">În așteptare</p>
+              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 futuristic:text-yellow-400">
                 {bookings.filter(b => {
                   const bookingDate = parseISO(b.interview_date);
                   return isSameMonth(bookingDate, currentDate) && b.status === 'pending';
                 }).length}
               </p>
             </div>
-            <AlertCircle className="h-8 w-8 text-yellow-500" />
+            <AlertCircle className="h-8 w-8 text-yellow-500 dark:text-yellow-400 futuristic:text-yellow-400" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white dark:bg-gray-800 futuristic:bg-gray-900/80 futuristic:backdrop-blur-xl futuristic:border futuristic:border-cyan-500/20 rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Anulate</p>
-              <p className="text-2xl font-bold text-red-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-400/70">Anulate</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400 futuristic:text-red-400">
                 {bookings.filter(b => {
                   const bookingDate = parseISO(b.interview_date);
                   return isSameMonth(bookingDate, currentDate) && b.status === 'cancelled';
                 }).length}
               </p>
             </div>
-            <XCircle className="h-8 w-8 text-red-500" />
+            <XCircle className="h-8 w-8 text-red-500 dark:text-red-400 futuristic:text-red-400" />
           </div>
         </div>
       </div>

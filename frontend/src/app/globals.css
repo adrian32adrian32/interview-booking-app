@@ -72,41 +72,8 @@
 }
 
 body {
-  @apply bg-background text-foreground;
-}
-
-/* Fix pentru inputuri în modul futuristic */
-.futuristic input,
-.futuristic textarea,
-.futuristic select {
-  color: #bdfffe !important;
-  background-color: rgba(220, 220, 255, 0.05);
-}
-
-.futuristic input::placeholder,
-.futuristic textarea::placeholder {
-  color: rgba(189, 255, 254, 0.5) !important;
-}
-
-/* Fix pentru select options în dark și futuristic */
-.dark option,
-.futuristic option {
-  background-color: #1f2937;
-  color: #e5e7eb;
-}
-
-.futuristic option {
-  background-color: #0a0e27;
-  color: #bdfffe;
-}
-
-/* Fix pentru componente third-party care folosesc clase non-standard */
-.futuristic .text-black {
-  color: #bdfffe !important;
-}
-
-.dark .text-black {
-  color: #e5e7eb !important;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 /* Scrollbar styling pentru dark și futuristic */
@@ -142,12 +109,16 @@ body {
   background: #8b5cf6;
 }
 
-/* Futuristic theme overrides pentru componentele Tailwind */
+/* ============================================== */
+/* STILURI PENTRU TEMA FUTURISTIC - REFĂCUTE */
+/* ============================================== */
+
+/* Futuristic theme base */
 .futuristic {
   background: hsl(var(--background));
 }
 
-/* Text colors overrides */
+/* Text colors pentru futuristic */
 .futuristic .text-gray-900,
 .futuristic .text-gray-800,
 .futuristic .text-gray-700,
@@ -166,7 +137,7 @@ body {
   color: hsl(var(--muted-foreground)) !important;
 }
 
-/* Background colors overrides */
+/* Background colors pentru futuristic */
 .futuristic .bg-white,
 .futuristic .bg-gray-50,
 .futuristic .bg-gray-100,
@@ -191,7 +162,7 @@ body {
   background-color: hsl(var(--background)) !important;
 }
 
-/* Border colors overrides */
+/* Border colors pentru futuristic */
 .futuristic .border-gray-200,
 .futuristic .border-gray-300,
 .futuristic .border-slate-200,
@@ -206,34 +177,223 @@ body {
   border-color: hsl(var(--border)) !important;
 }
 
-/* Hover states */
-.futuristic .hover\:bg-gray-50:hover,
-.futuristic .hover\:bg-gray-100:hover,
-.futuristic .hover\:bg-slate-50:hover,
-.futuristic .hover\:bg-slate-100:hover {
-  background-color: hsl(var(--accent)) !important;
+/* ============================================== */
+/* STILURI SPECIFICE PENTRU INPUT-URI */
+/* ============================================== */
+
+/* Input base styles pentru toate temele */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+textarea,
+select {
+  transition: all 0.3s ease;
 }
 
-.futuristic .hover\:bg-gray-700:hover,
-.futuristic .hover\:bg-gray-800:hover,
-.futuristic .hover\:bg-slate-700:hover,
-.futuristic .hover\:bg-slate-800:hover {
-  background-color: hsl(var(--secondary)) !important;
+/* Dark theme inputs */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="tel"],
+.dark textarea,
+.dark select {
+  background-color: rgb(55, 65, 81);
+  border-color: rgb(75, 85, 99);
+  color: rgb(229, 231, 235);
 }
 
-/* Shadow effects pentru futuristic */
-.futuristic .shadow-sm,
-.futuristic .shadow,
-.futuristic .shadow-md,
-.futuristic .shadow-lg {
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+/* FUTURISTIC THEME INPUTS - Cu specificitate maximă */
+.futuristic input[type="text"],
+.futuristic input[type="email"],
+.futuristic input[type="password"],
+.futuristic input[type="tel"],
+.futuristic textarea,
+.futuristic select {
+  background-color: rgba(30, 27, 75, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  color: rgb(233, 213, 255) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.1), 
+              0 4px 6px -1px rgba(139, 92, 246, 0.1) !important;
 }
 
-/* Button styles pentru futuristic */
+/* Override pentru orice clasă de background în futuristic */
+.futuristic input[class*="bg-"],
+.futuristic textarea[class*="bg-"],
+.futuristic select[class*="bg-"] {
+  background-color: rgba(30, 27, 75, 0.6) !important;
+}
+
+/* Placeholder pentru futuristic */
+.futuristic input::placeholder,
+.futuristic textarea::placeholder {
+  color: rgba(196, 181, 253, 0.6) !important;
+  opacity: 1 !important;
+}
+
+/* Focus states pentru futuristic */
+.futuristic input:focus,
+.futuristic textarea:focus,
+.futuristic select:focus {
+  outline: none !important;
+  border-color: rgba(167, 139, 250, 0.8) !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2),
+              0 0 20px rgba(139, 92, 246, 0.2) !important;
+  background-color: rgba(30, 27, 75, 0.8) !important;
+}
+
+/* Hover states pentru futuristic */
+.futuristic input:hover:not(:focus),
+.futuristic textarea:hover:not(:focus),
+.futuristic select:hover:not(:focus) {
+  border-color: rgba(139, 92, 246, 0.6) !important;
+  background-color: rgba(30, 27, 75, 0.7) !important;
+}
+
+/* Select options pentru futuristic */
+.futuristic select option {
+  background-color: rgb(30, 27, 75) !important;
+  color: rgb(233, 213, 255) !important;
+  padding: 8px;
+}
+
+/* ============================================== */
+/* FIX COMPLET PENTRU AUTOFILL ÎN FUTURISTIC */
+/* ============================================== */
+
+/* Autofill fix pentru toate tipurile de input - SUPER AGRESIV */
+.futuristic input:-webkit-autofill,
+.futuristic input:-webkit-autofill:hover,
+.futuristic input:-webkit-autofill:focus,
+.futuristic input:-webkit-autofill:active,
+.futuristic textarea:-webkit-autofill,
+.futuristic textarea:-webkit-autofill:hover,
+.futuristic textarea:-webkit-autofill:focus,
+.futuristic textarea:-webkit-autofill:active,
+.futuristic select:-webkit-autofill,
+.futuristic select:-webkit-autofill:hover,
+.futuristic select:-webkit-autofill:focus,
+.futuristic select:-webkit-autofill:active {
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset,
+                      0 0 0 1px rgba(139, 92, 246, 0.4),
+                      0 4px 6px -1px rgba(139, 92, 246, 0.1) !important;
+  box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset,
+              0 0 0 1px rgba(139, 92, 246, 0.4),
+              0 4px 6px -1px rgba(139, 92, 246, 0.1) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  caret-color: rgb(233, 213, 255) !important;
+  transition: background-color 600000s 0s, color 600000s 0s !important;
+  background-color: transparent !important;
+}
+
+/* Specific pentru fiecare tip de input cu autofill */
+.futuristic input[type="text"]:-webkit-autofill,
+.futuristic input[type="text"]:-webkit-autofill:hover,
+.futuristic input[type="text"]:-webkit-autofill:focus,
+.futuristic input[type="email"]:-webkit-autofill,
+.futuristic input[type="email"]:-webkit-autofill:hover,
+.futuristic input[type="email"]:-webkit-autofill:focus,
+.futuristic input[type="password"]:-webkit-autofill,
+.futuristic input[type="password"]:-webkit-autofill:hover,
+.futuristic input[type="password"]:-webkit-autofill:focus,
+.futuristic input[type="tel"]:-webkit-autofill,
+.futuristic input[type="tel"]:-webkit-autofill:hover,
+.futuristic input[type="tel"]:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset !important;
+  background-clip: padding-box !important;
+}
+
+/* Firefox autofill */
+.futuristic input:autofill,
+.futuristic input:-moz-autofill,
+.futuristic input:-moz-autofill-preview {
+  background-color: rgba(30, 27, 75, 1) !important;
+  color: rgb(233, 213, 255) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Edge/IE autofill */
+.futuristic input:-ms-input-placeholder,
+.futuristic textarea:-ms-input-placeholder {
+  color: rgba(196, 181, 253, 0.6) !important;
+}
+
+/* Animation pentru prevenirea flash-ului alb */
+@-webkit-keyframes autofill-fix-futuristic {
+  0%, 100% {
+    color: rgb(233, 213, 255) !important;
+    background-color: transparent !important;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset !important;
+  }
+}
+
+.futuristic input:-webkit-autofill {
+  -webkit-animation: autofill-fix-futuristic 0s forwards !important;
+  animation: autofill-fix-futuristic 0s forwards !important;
+}
+
+/* Clasă helper pentru JS fix */
+.futuristic input.autofill-fix,
+.futuristic input.is-autofilled {
+  background-color: rgba(30, 27, 75, 1) !important;
+  color: rgb(233, 213, 255) !important;
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Override pentru toate clasele de background când este autofill */
+.futuristic input[class*="bg-"]:-webkit-autofill,
+.futuristic textarea[class*="bg-"]:-webkit-autofill,
+.futuristic select[class*="bg-"]:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset !important;
+}
+
+/* Focus cu autofill */
+.futuristic input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px rgba(30, 27, 75, 1) inset,
+                      0 0 0 3px rgba(139, 92, 246, 0.2) !important;
+  outline: none !important;
+  border-color: rgba(167, 139, 250, 0.8) !important;
+}
+
+/* Stiluri pentru atribute speciale */
+.futuristic input[autocomplete="off"],
+.futuristic input[data-lpignore="true"],
+.futuristic input[data-form-type="other"] {
+  background-color: rgba(30, 27, 75, 0.6) !important;
+}
+
+/* Elimină iconițele de autofill */
+.futuristic input::-webkit-contacts-auto-fill-button,
+.futuristic input::-webkit-credentials-auto-fill-button {
+  visibility: hidden !important;
+  display: none !important;
+  pointer-events: none !important;
+}
+
+/* Transition pentru toate inputurile pentru a preveni flash */
+.futuristic input,
+.futuristic textarea,
+.futuristic select {
+  transition: background-color 600000s 0s,
+              color 600000s 0s,
+              border-color 0.3s ease !important;
+}
+
+/* ============================================== */
+/* ALTE ELEMENTE UI PENTRU FUTURISTIC */
+/* ============================================== */
+
+/* Butoane pentru futuristic */
 .futuristic button {
   position: relative;
   overflow: hidden;
   transition: all 0.3s ease;
+  z-index: 1;
 }
 
 .futuristic button::before {
@@ -247,6 +407,7 @@ body {
   background: rgba(139, 92, 246, 0.3);
   transform: translate(-50%, -50%);
   transition: width 0.6s, height 0.6s;
+  z-index: -1;
 }
 
 .futuristic button:hover::before {
@@ -255,123 +416,200 @@ body {
 }
 
 .futuristic button:hover {
-  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(139, 92, 246, 0.3);
 }
 
-/* Ring focus pentru futuristic */
-.futuristic .ring-2 {
-  box-shadow: 0 0 0 2px hsl(var(--ring));
+/* Cards și shadows pentru futuristic */
+.futuristic .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(139, 92, 246, 0.1);
 }
 
+.futuristic .shadow {
+  box-shadow: 0 1px 3px 0 rgba(139, 92, 246, 0.1), 
+              0 1px 2px 0 rgba(139, 92, 246, 0.06);
+}
+
+.futuristic .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.1), 
+              0 2px 4px -1px rgba(139, 92, 246, 0.06);
+}
+
+.futuristic .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.1), 
+              0 4px 6px -2px rgba(139, 92, 246, 0.05);
+}
+
+/* Hover states generice */
+.futuristic .hover\:bg-gray-50:hover,
+.futuristic .hover\:bg-gray-100:hover {
+  background-color: rgba(139, 92, 246, 0.1) !important;
+}
+
+.futuristic .hover\:bg-gray-700:hover,
+.futuristic .hover\:bg-gray-800:hover {
+  background-color: rgba(88, 28, 135, 0.3) !important;
+}
+
+/* Focus ring pentru futuristic */
 .futuristic .focus\:ring-2:focus {
-  box-shadow: 0 0 0 2px hsl(var(--ring));
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5);
 }
 
-/* Table styles pentru futuristic */
-.futuristic table {
-  border-collapse: separate;
-  border-spacing: 0;
+/* Labels în futuristic */
+.futuristic label {
+  color: rgb(196, 181, 253);
+  font-weight: 500;
 }
 
-.futuristic thead {
-  background-color: hsl(var(--muted));
+/* Fix pentru text negru care devine invizibil */
+.futuristic .text-black {
+  color: rgb(233, 213, 255) !important;
 }
 
-.futuristic tbody tr {
-  transition: all 0.2s ease;
+/* Color scheme pentru browser */
+.futuristic input,
+.futuristic textarea,
+.futuristic select {
+  color-scheme: dark;
 }
 
-.futuristic tbody tr:hover {
-  background-color: hsl(var(--accent));
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+/* ============================================== */
+/* SUPER FIX PENTRU AUTOFILL ÎN TEMA FUTURISTIC */
+/* ============================================== */
+
+/* Varianta 1: Box-shadow ultra agresiv */
+html.futuristic input:-webkit-autofill,
+html.futuristic input:-webkit-autofill:hover,
+html.futuristic input:-webkit-autofill:focus,
+html.futuristic input:-webkit-autofill:active,
+.futuristic input:-webkit-autofill,
+.futuristic input:-webkit-autofill:hover,
+.futuristic input:-webkit-autofill:focus,
+.futuristic input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 9999px rgba(30, 27, 75, 1) inset !important;
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  box-shadow: 0 0 0 9999px rgba(30, 27, 75, 1) inset !important;
+  color: rgb(233, 213, 255) !important;
+  background-color: rgba(30, 27, 75, 1) !important;
+  caret-color: rgb(233, 213, 255) !important;
 }
 
-/* Card effects pentru futuristic */
-.futuristic .rounded-lg,
-.futuristic .rounded-md {
-  position: relative;
-  overflow: hidden;
+/* Varianta 2: Filter și background-clip */
+.futuristic input:-webkit-autofill {
+  filter: none !important;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
 }
 
-.futuristic .rounded-lg::after,
-.futuristic .rounded-md::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(45deg, transparent, hsl(var(--primary)), transparent);
-  opacity: 0;
-  z-index: -1;
-  transition: opacity 0.3s ease;
+/* Varianta 3: Animation cu delay infinit */
+@-webkit-keyframes autofill-fix {
+  0% {
+    background-color: rgba(30, 27, 75, 1) !important;
+  }
 }
 
-.futuristic .rounded-lg:hover::after,
-.futuristic .rounded-md:hover::after {
-  opacity: 0.1;
+.futuristic input:-webkit-autofill {
+  -webkit-animation-name: autofill-fix !important;
+  -webkit-animation-delay: 1s !important;
+  -webkit-animation-fill-mode: both !important;
 }
 
-/* Link styles pentru futuristic */
-.futuristic a {
-  position: relative;
-  transition: color 0.3s ease;
+/* Varianta 4: Transition cu delay masiv */
+.futuristic input:-webkit-autofill {
+  transition: background-color 9999999999s ease-in-out 0s,
+              color 9999999999s ease-in-out 0s !important;
 }
 
-.futuristic a:hover {
-  color: hsl(var(--primary));
+/* Pentru toate tipurile de input individual */
+.futuristic input[type="text"]:-webkit-autofill,
+.futuristic input[type="email"]:-webkit-autofill,
+.futuristic input[type="password"]:-webkit-autofill,
+.futuristic input[type="tel"]:-webkit-autofill,
+.futuristic input[type="url"]:-webkit-autofill,
+.futuristic input[type="search"]:-webkit-autofill,
+.futuristic textarea:-webkit-autofill,
+.futuristic select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 9999px rgba(30, 27, 75, 1) inset !important;
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  background-color: rgba(30, 27, 75, 1) !important;
 }
 
-/* Badge and alert fixes pentru futuristic */
-.futuristic .bg-green-100,
-.futuristic .bg-green-50 {
-  background-color: rgba(34, 197, 94, 0.1) !important;
+/* Fix pentru pseudo-elements */
+.futuristic input:-webkit-autofill::first-line {
+  color: rgb(233, 213, 255) !important;
 }
 
-.futuristic .text-green-800,
-.futuristic .text-green-700 {
-  color: #22c55e !important;
+/* Firefox fallback */
+@-moz-document url-prefix() {
+  .futuristic input:autofill {
+    background-color: rgba(30, 27, 75, 1) !important;
+    color: rgb(233, 213, 255) !important;
+  }
 }
 
-.futuristic .bg-yellow-100,
-.futuristic .bg-yellow-50 {
-  background-color: rgba(250, 204, 21, 0.1) !important;
+/* Clasă helper pentru JavaScript */
+.futuristic input.autofill-fixed,
+.futuristic .autofill-fixed {
+  background-color: rgba(30, 27, 75, 1) !important;
+  color: rgb(233, 213, 255) !important;
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
 }
 
-.futuristic .text-yellow-800,
-.futuristic .text-yellow-700 {
-  color: #facc15 !important;
+/* ============================================== */
+/* FIX PENTRU TRANZIȚIE ÎNTRE TEME CU AUTOFILL */
+/* ============================================== */
+
+/* Reset pentru dark theme după futuristic */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 100px rgb(55, 65, 81) inset !important;
+  -webkit-text-fill-color: rgb(229, 231, 235) !important;
+  border: 1px solid rgb(75, 85, 99) !important;
+  transition: none !important;
 }
 
-.futuristic .bg-red-100,
-.futuristic .bg-red-50 {
-  background-color: rgba(239, 68, 68, 0.1) !important;
+/* Reset pentru light theme după futuristic */
+html:not(.dark):not(.futuristic) input:-webkit-autofill,
+html:not(.dark):not(.futuristic) input:-webkit-autofill:hover,
+html:not(.dark):not(.futuristic) input:-webkit-autofill:focus,
+html:not(.dark):not(.futuristic) input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 100px white inset !important;
+  -webkit-text-fill-color: rgb(17, 24, 39) !important;
+  border: 1px solid rgb(209, 213, 219) !important;
+  transition: none !important;
 }
 
-.futuristic .text-red-800,
-.futuristic .text-red-700 {
-  color: #ef4444 !important;
+/* Elimină stilurile inline când nu mai este futuristic */
+html:not(.futuristic) input.autofill-fixed {
+  background-color: initial !important;
+  color: initial !important;
+  -webkit-text-fill-color: initial !important;
+  border: initial !important;
+  caret-color: initial !important;
 }
 
-.futuristic .bg-blue-100,
-.futuristic .bg-blue-50 {
-  background-color: rgba(59, 130, 246, 0.1) !important;
+/* Specificity mai mare pentru futuristic */
+html.futuristic input:-webkit-autofill,
+html.futuristic input:-webkit-autofill:hover,
+html.futuristic input:-webkit-autofill:focus,
+html.futuristic input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 100px rgba(30, 27, 75, 1) inset !important;
+  -webkit-text-fill-color: rgb(233, 213, 255) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
 }
 
-.futuristic .text-blue-800,
-.futuristic .text-blue-700,
-.futuristic .text-blue-600 {
-  color: #8b5cf6 !important;
+/* Tranziție smooth între teme (opțional) */
+input {
+  transition: background-color 0.3s ease, 
+              color 0.3s ease, 
+              border-color 0.3s ease;
 }
 
-.futuristic .bg-blue-600,
-.futuristic .bg-blue-700 {
-  background-color: hsl(var(--primary)) !important;
-}
-
-.futuristic .hover\:bg-blue-700:hover,
-.futuristic .hover\:bg-blue-800:hover {
-  background-color: hsl(var(--primary)) !important;
-  filter: brightness(0.9);
+/* Dar nu pentru autofill */
+input:-webkit-autofill {
+  transition: none !important;
 }

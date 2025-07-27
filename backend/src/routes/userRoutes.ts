@@ -38,6 +38,42 @@ const adminMiddleware = async (req: Request, res: Response, next: Function) => {
   }
 };
 
+// Verifică dacă există user cu email (pentru admin când creează programări)
+router.get('/check-email', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Email required' 
+      });
+    }
+    
+    const query = 'SELECT id, email, first_name, last_name, phone FROM users WHERE email = $1';
+    const result = await pool.query(query, [email]);
+    
+    if (result.rows.length > 0) {
+      res.json({
+        success: true,
+        exists: true,
+        user: result.rows[0]
+      });
+    } else {
+      res.json({
+        success: true,
+        exists: false
+      });
+    }
+  } catch (error) {
+    console.error('Check email error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error' 
+    });
+  }
+});
+
 // Get all users (admin)
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -122,11 +158,11 @@ router.get('/:id', adminMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Update user (admin)
+// Update user (admin) - VERSIUNE ACTUALIZATĂ CU SCHIMBARE PAROLĂ
 router.put('/:id', adminMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { first_name, last_name, phone, role, status } = req.body;
+    const { first_name, last_name, phone, role, status, password } = req.body;
 
     // Verifică dacă utilizatorul există
     const checkUser = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
@@ -142,27 +178,96 @@ router.put('/:id', adminMiddleware, async (req: Request, res: Response) => {
       });
     }
 
-    const result = await pool.query(
-      `UPDATE users 
-       SET first_name = $1, 
-           last_name = $2, 
-           phone = $3, 
-           role = $4, 
-           status = $5, 
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
-       RETURNING id, username, first_name, last_name, email, phone, role, status`,
-      [first_name, last_name, phone, role, status || 'active', id]
-    );
+    // Actualizare date de bază (fără parolă)
+    let query = `UPDATE users 
+                 SET first_name = $1, 
+                     last_name = $2, 
+                     phone = $3, 
+                     role = $4, 
+                     status = $5, 
+                     updated_at = CURRENT_TIMESTAMP`;
+    
+    let queryParams = [first_name, last_name, phone, role, status || 'active'];
+    
+    // Dacă se trimite o parolă nouă, actualizează și parola
+    if (password && password.trim() !== '') {
+      console.log('🔐 Actualizare parolă pentru user ID:', id);
+      
+      // Hash pentru noua parolă
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      query = `UPDATE users 
+               SET first_name = $1, 
+                   last_name = $2, 
+                   phone = $3, 
+                   role = $4, 
+                   status = $5,
+                   password_hash = $6,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = $7
+               RETURNING id, username, first_name, last_name, email, phone, role, status`;
+      
+      queryParams = [first_name, last_name, phone, role, status || 'active', hashedPassword, id];
+    } else {
+      // Fără actualizare parolă
+      query += ` WHERE id = $6
+                 RETURNING id, username, first_name, last_name, email, phone, role, status`;
+      queryParams.push(id);
+    }
+
+    const result = await pool.query(query, queryParams);
 
     res.json({
       success: true,
       user: result.rows[0],
-      message: 'Utilizator actualizat cu succes',
+      message: password ? 'Utilizator și parolă actualizate cu succes' : 'Utilizator actualizat cu succes',
     });
   } catch (error) {
     console.error('Error updating user:', error);
     res.status(500).json({ success: false, message: 'Eroare la actualizarea utilizatorului' });
+  }
+});
+
+// Change user password (admin only) - RUTĂ NOUĂ
+router.patch('/:id/password', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Parola nouă este obligatorie',
+      });
+    }
+
+    // Verifică dacă utilizatorul există
+    const checkUser = await pool.query('SELECT email FROM users WHERE id = $1', [id]);
+    if (checkUser.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Utilizator negăsit' });
+    }
+
+    // Hash pentru noua parolă
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Actualizează parola
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [hashedPassword, id]
+    );
+
+    console.log(`✅ Parolă actualizată pentru user ${checkUser.rows[0].email}`);
+
+    res.json({
+      success: true,
+      message: 'Parolă actualizată cu succes',
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Eroare la schimbarea parolei' 
+    });
   }
 });
 

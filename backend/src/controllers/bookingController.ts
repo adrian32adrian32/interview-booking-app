@@ -1,24 +1,32 @@
+import { socketService } from '../services/socketService';
+import emailService from '../services/emailService';
 import { Request, Response } from 'express';
 import { pool } from '../server';
+import bcrypt from 'bcryptjs';
 
 // Obține toate programările
 export const getAllBookings = async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT 
-        id,
-        client_name,
-        client_email,
-        client_phone,
-        interview_date,
-        interview_time,
-        interview_type,
-        status,
-        notes,
-        created_at,
-        updated_at
-      FROM client_bookings 
-      ORDER BY interview_date DESC, interview_time DESC`
+        b.id,
+        b.user_id,
+        b.client_name,
+        b.client_email,
+        b.client_phone,
+        b.interview_date,
+        b.interview_time,
+        b.interview_type,
+        b.status,
+        b.notes,
+        b.created_at,
+        b.updated_at,
+        u.username,
+        u.first_name,
+        u.last_name
+      FROM bookings b
+      LEFT JOIN users u ON b.user_id = u.id
+      ORDER BY b.interview_date DESC, b.interview_time DESC`
     );
     res.json(result.rows);
   } catch (error) {
@@ -32,7 +40,10 @@ export const getBookingById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      'SELECT * FROM client_bookings WHERE id = $1',
+      `SELECT b.*, u.username, u.first_name, u.last_name 
+       FROM bookings b
+       LEFT JOIN users u ON b.user_id = u.id
+       WHERE b.id = $1`,
       [id]
     );
     
@@ -67,7 +78,7 @@ export const createBooking = async (req: Request, res: Response) => {
       interview_time,
       interview_type,
       status,
-      created_by
+      created_by,
     } = req.body;
 
     // Folosește valorile disponibile (prioritate la snake_case pentru compatibilitate cu frontend)
@@ -82,39 +93,114 @@ export const createBooking = async (req: Request, res: Response) => {
 
     // Validare
     if (!name || !email || !phone || !date || !time) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Toate câmpurile obligatorii trebuie completate' 
+        message: 'Toate câmpurile obligatorii trebuie completate',
       });
+    }
+
+    // Verifică dacă există un utilizator cu acest email
+    let userId = req.user?.id; // Dacă e user logat
+
+    if (!userId) {
+      // Verifică dacă există deja un user cu acest email
+      const existingUserQuery = 'SELECT id FROM users WHERE email = $1';
+      const existingUserResult = await pool.query(existingUserQuery, [email]);
+
+      if (existingUserResult.rows.length > 0) {
+        // Există deja un user cu acest email
+        userId = existingUserResult.rows[0].id;
+      } else {
+        // Creează un nou user pentru acest email
+        const createUserQuery = `
+          INSERT INTO users (email, username, password, first_name, last_name, phone, role, status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'user', 'active')
+          RETURNING id
+        `;
+
+        // Generează username din email
+        const username = email.split('@')[0] + '_' + Date.now();
+
+        // Generează o parolă temporară
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+        // Extrage nume și prenume din client_name
+        const nameParts = name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const newUserResult = await pool.query(createUserQuery, [
+          email,
+          username,
+          hashedPassword,
+          firstName,
+          lastName,
+          phone,
+        ]);
+
+        userId = newUserResult.rows[0].id;
+
+        // TODO: Trimite email cu credențialele (opțional)
+        // await emailService.sendWelcomeEmail(email, tempPassword);
+      }
     }
 
     // Verifică dacă slotul este disponibil
     const slotCheck = await pool.query(
-      'SELECT * FROM client_bookings WHERE interview_date = $1 AND interview_time = $2 AND status != $3',
+      'SELECT * FROM bookings WHERE interview_date = $1 AND interview_time = $2 AND status != $3',
       [date, time, 'cancelled']
     );
 
     if (slotCheck.rows.length > 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Acest slot este deja rezervat' 
+        message: 'Acest slot este deja rezervat',
       });
     }
 
-    // Creează programarea în tabelul client_bookings
+    // Creează programarea în tabelul bookings
     const result = await pool.query(
-      `INSERT INTO client_bookings 
-       (client_name, client_email, client_phone, interview_date, interview_time, interview_type, status, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO bookings 
+       (user_id, client_name, client_email, client_phone, interview_date, interview_time, interview_type, status, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [name, email, phone, date, time, type, bookingStatus, bookingNotes]
+      [userId, name, email, phone, date, time, type, bookingStatus, bookingNotes]
     );
+    
+    // Obține booking-ul creat
+    const newBooking = result.rows[0];
+
+    // Trimite notificare Socket.io
+    socketService.broadcastBookingUpdate('created', newBooking);
+
+    // Trimite email de confirmare
+    try {
+      // Pregătește datele utilizatorului pentru email
+      const user = {
+        id: userId,
+        email: email,
+        first_name: name.split(' ')[0],
+        last_name: name.split(' ').slice(1).join(' '),
+      };
+
+      // Trimite email de confirmare clientului
+      await emailService.sendBookingConfirmation(newBooking, user);
+      console.log('✅ Confirmation email sent to:', email);
+
+      // Trimite notificare administratorului
+      await emailService.sendAdminNotification(newBooking);
+      console.log('✅ Admin notification sent');
+    } catch (emailError) {
+      console.error('❌ Error sending emails:', emailError);
+      // Nu bloca crearea booking-ului dacă email-ul eșuează
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Programare creată cu succes',
+      message: userId ? 'Programare creată cu succes!' : 'Programare creată și cont nou creat!',
       booking: result.rows[0],
-      data: result.rows[0]
+      data: result.rows[0],
     });
   } catch (error) {
     console.error('Error creating booking:', error);
@@ -140,6 +226,13 @@ export const updateBooking = async (req: Request, res: Response) => {
       interview_time,
       interview_type
     } = req.body;
+
+    // Obține booking-ul vechi pentru comparație
+    const oldBookingResult = await pool.query('SELECT * FROM bookings WHERE id = $1', [id]);
+    if (oldBookingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+    const oldBooking = oldBookingResult.rows[0];
 
     // Construiește query-ul dinamic pentru a actualiza doar câmpurile trimise
     const updateFields = [];
@@ -194,7 +287,7 @@ export const updateBooking = async (req: Request, res: Response) => {
     values.push(id);
     
     const query = `
-      UPDATE client_bookings 
+      UPDATE bookings 
       SET ${updateFields.join(', ')}
       WHERE id = $${paramCounter}
       RETURNING *
@@ -204,6 +297,21 @@ export const updateBooking = async (req: Request, res: Response) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    const updatedBooking = result.rows[0];
+
+    // Trimite notificare Socket.io
+    if (status !== undefined && oldBooking.status !== status) {
+      // Status s-a schimbat
+      if (status === 'cancelled') {
+        socketService.broadcastBookingUpdate('cancelled', updatedBooking);
+      } else {
+        socketService.broadcastBookingUpdate('updated', updatedBooking);
+      }
+    } else {
+      // Alte modificări
+      socketService.broadcastBookingUpdate('updated', updatedBooking);
     }
 
     res.json({
@@ -224,13 +332,18 @@ export const deleteBooking = async (req: Request, res: Response) => {
     const { id } = req.params;
     
     const result = await pool.query(
-      'DELETE FROM client_bookings WHERE id = $1 RETURNING *',
+      'DELETE FROM bookings WHERE id = $1 RETURNING *',
       [id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Booking not found' });
     }
+
+    const deletedBooking = result.rows[0];
+
+    // Trimite notificare Socket.io
+    socketService.broadcastBookingUpdate('cancelled', deletedBooking);
 
     res.json({ 
       success: true,
@@ -249,7 +362,11 @@ export const getBookingsByDate = async (req: Request, res: Response) => {
     const { date } = req.params;
     
     const result = await pool.query(
-      'SELECT * FROM client_bookings WHERE interview_date = $1 ORDER BY interview_time ASC',
+      `SELECT b.*, u.username, u.first_name, u.last_name 
+       FROM bookings b
+       LEFT JOIN users u ON b.user_id = u.id
+       WHERE b.interview_date = $1 
+       ORDER BY b.interview_time ASC`,
       [date]
     );
     
@@ -272,9 +389,9 @@ export const getAvailableTimeSlots = async (req: Request, res: Response) => {
       '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
     ];
     
-    // Obține sloturile ocupate pentru data respectivă din client_bookings
+    // Obține sloturile ocupate pentru data respectivă din bookings
     const bookedSlots = await pool.query(
-      `SELECT interview_time FROM client_bookings 
+      `SELECT interview_time FROM bookings 
        WHERE interview_date = $1 
        AND status != 'cancelled'`,
       [date]
@@ -301,5 +418,31 @@ export const getAvailableTimeSlots = async (req: Request, res: Response) => {
       success: false,
       error: 'Failed to fetch available slots' 
     });
+  }
+};
+
+// Obține programările utilizatorului curent
+export const getMyBookings = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    const result = await pool.query(
+      `SELECT * FROM bookings 
+       WHERE user_id = $1 
+       ORDER BY interview_date DESC, interview_time DESC`,
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      bookings: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching user bookings:', error);
+    res.status(500).json({ error: 'Failed to fetch bookings' });
   }
 };

@@ -6,6 +6,10 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  generateBuildId: async () => {
+    // Generează un ID unic pentru fiecare build pentru a evita cache-ul
+    return Date.now().toString();
+  },
   async rewrites() {
     return [
       {

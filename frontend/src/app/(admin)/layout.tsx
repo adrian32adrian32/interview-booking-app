@@ -9,7 +9,8 @@ import {
   Home, 
   Users, 
   Calendar,
-  // Clock, // Removed - nu mai avem nevoie de sloturi
+  CalendarDays,
+  Clock,
   BarChart,
   Settings,
   LogOut,
@@ -17,12 +18,14 @@ import {
 } from 'lucide-react';
 import AdminRoute from '@/components/AdminRoute';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationSystem from '@/components/notifications/NotificationSystem';
 
 const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
-  { name: 'Utilizatori', href: '/admin/users', icon: Users },
+  { name: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
   { name: 'Programări', href: '/admin/bookings', icon: Calendar },
-  // { name: 'Sloturi de timp', href: '/admin/slots', icon: Clock }, // COMENTAT - Sloturile sunt generate automat
+  { name: 'Utilizatori', href: '/admin/users', icon: Users },
+  { name: 'Setări Program', href: '/admin/time-settings', icon: Clock },
   { name: 'Statistici', href: '/admin/stats', icon: BarChart },
   { name: 'Setări', href: '/admin/settings', icon: Settings },
 ];
@@ -59,7 +62,10 @@ export default function AdminLayout({
                   <Shield className="h-8 w-8 text-white dark:text-gray-100 futuristic:text-primary" />
                   <span className="ml-2 text-white dark:text-gray-100 futuristic:text-foreground text-xl font-semibold">Admin Panel</span>
                 </div>
-                <ThemeToggle />
+                <div className="flex items-center gap-3">
+                  <NotificationSystem />
+                  <ThemeToggle />
+                </div>
               </div>
               <nav className="mt-5 flex-1 px-2 space-y-1">
                 {navigation.map((item) => {
@@ -79,9 +85,9 @@ export default function AdminLayout({
                       <item.icon
                         className={`
                           mr-3 flex-shrink-0 h-6 w-6
-                          ${isActive 
-                            ? 'text-white dark:text-blue-300 futuristic:text-primary-foreground' 
-                            : 'text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-300 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground'
+                          ${isActive
+                            ? 'text-gray-300'
+                            : 'text-gray-400 group-hover:text-gray-300'
                           }
                         `}
                       />
@@ -91,34 +97,26 @@ export default function AdminLayout({
                 })}
               </nav>
             </div>
-            <div className="flex-shrink-0 flex bg-gray-700 dark:bg-gray-900 futuristic:bg-secondary p-4 border-t border-gray-600 dark:border-gray-800 futuristic:border-border">
+            <div className="flex-shrink-0 flex bg-gray-700 dark:bg-gray-900 futuristic:bg-card/50 p-4">
               <button
                 onClick={handleLogout}
-                className="flex-shrink-0 w-full group block hover:bg-gray-600 dark:hover:bg-gray-800 futuristic:hover:bg-accent rounded-md p-2 transition-colors"
+                className="flex items-center w-full text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-600 dark:hover:bg-gray-800 futuristic:hover:bg-accent px-2 py-2 rounded-md transition-colors"
               >
-                <div className="flex items-center">
-                  <LogOut className="inline-block h-5 w-5 text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-300 dark:group-hover:text-gray-400 futuristic:group-hover:text-accent-foreground" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-white dark:text-gray-100 futuristic:text-foreground">Deconectare</p>
-                  </div>
-                </div>
+                <LogOut className="mr-3 h-6 w-6" />
+                Delogare
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile menu button */}
-        <div className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 futuristic:bg-card shadow dark:shadow-gray-900 futuristic:shadow-border z-10">
-          <div className="px-4 py-3 flex items-center justify-between">
+        {/* Header pentru mobile */}
+        <div className="md:hidden">
+          <div className="bg-gray-800 dark:bg-gray-950 futuristic:bg-card border-b border-gray-700 dark:border-gray-900 futuristic:border-border px-4 py-2 flex items-center justify-between">
             <div className="flex items-center">
-              <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400 futuristic:text-primary" />
-              <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-foreground">Admin Panel</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
               <button
+                type="button"
+                className="text-gray-400 hover:text-white focus:outline-none focus:text-white"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground hover:text-gray-700 dark:hover:text-gray-300 futuristic:hover:text-foreground"
               >
                 {sidebarOpen ? (
                   <X className="h-6 w-6" />
@@ -126,6 +124,14 @@ export default function AdminLayout({
                   <Menu className="h-6 w-6" />
                 )}
               </button>
+              <div className="ml-4 flex items-center">
+                <Shield className="h-8 w-8 text-white" />
+                <span className="ml-2 text-white text-xl font-semibold">Admin</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <NotificationSystem />
+              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -134,8 +140,21 @@ export default function AdminLayout({
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-20 bg-gray-800 dark:bg-gray-900 futuristic:bg-black bg-opacity-75" onClick={() => setSidebarOpen(false)}>
             <div className="fixed inset-y-0 left-0 w-64 bg-gray-800 dark:bg-gray-950 futuristic:bg-card" onClick={(e) => e.stopPropagation()}>
-              <div className="pt-16 pb-4">
-                <nav className="px-2 space-y-1">
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700 dark:border-gray-900 futuristic:border-border">
+                  <div className="flex items-center">
+                    <Shield className="h-8 w-8 text-white" />
+                    <span className="ml-2 text-white text-xl font-semibold">Admin Panel</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-white"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
                   {navigation.map((item) => {
                     const isActive = pathname === item.href;
                     return (
@@ -144,19 +163,19 @@ export default function AdminLayout({
                         href={item.href}
                         onClick={() => setSidebarOpen(false)}
                         className={`
-                          group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors
+                          group flex items-center px-2 py-2 text-sm font-medium rounded-md
                           ${isActive
-                            ? 'bg-gray-900 dark:bg-blue-900/50 futuristic:bg-primary text-white futuristic:text-primary-foreground'
-                            : 'text-gray-300 hover:bg-gray-700 dark:hover:bg-gray-800 futuristic:hover:bg-accent hover:text-white futuristic:hover:text-accent-foreground'
+                            ? 'bg-gray-900 dark:bg-blue-900/50 futuristic:bg-primary text-white'
+                            : 'text-gray-300 hover:bg-gray-700 dark:hover:bg-gray-800 futuristic:hover:bg-accent hover:text-white'
                           }
                         `}
                       >
                         <item.icon
                           className={`
                             mr-3 flex-shrink-0 h-6 w-6
-                            ${isActive 
-                              ? 'text-white dark:text-blue-300 futuristic:text-primary-foreground' 
-                              : 'text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground group-hover:text-gray-300'
+                            ${isActive
+                              ? 'text-gray-300'
+                              : 'text-gray-400 group-hover:text-gray-300'
                             }
                           `}
                         />
@@ -165,13 +184,13 @@ export default function AdminLayout({
                     );
                   })}
                 </nav>
-                <div className="mt-6 px-4">
+                <div className="flex-shrink-0 p-4">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center px-2 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 dark:hover:bg-gray-800 futuristic:hover:bg-accent hover:text-white futuristic:hover:text-accent-foreground transition-colors"
+                    className="flex items-center w-full text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-800 futuristic:hover:bg-accent px-2 py-2 rounded-md"
                   >
-                    <LogOut className="mr-3 h-6 w-6 text-gray-400 dark:text-gray-500 futuristic:text-muted-foreground" />
-                    Deconectare
+                    <LogOut className="mr-3 h-6 w-6" />
+                    Delogare
                   </button>
                 </div>
               </div>
@@ -181,7 +200,7 @@ export default function AdminLayout({
 
         {/* Main content */}
         <div className="md:pl-64 flex flex-col flex-1">
-          <main className="flex-1 md:pt-0 pt-16">
+          <main className="flex-1">
             <div className="py-6">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
                 {children}

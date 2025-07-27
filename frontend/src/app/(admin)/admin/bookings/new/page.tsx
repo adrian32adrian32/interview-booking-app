@@ -18,6 +18,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import axios from '@/lib/axios';
+import TimeSlotPicker from '@/components/booking/TimeSlotPicker';
 
 interface TimeSlot {
   time: string;
@@ -27,15 +29,17 @@ interface TimeSlot {
 export default function NewBookingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [existingUser, setExistingUser] = useState<any>(null);
+  
+  // State pentru date și timp selectate cu TimeSlotPicker
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string>('');
   
   const [formData, setFormData] = useState({
     client_name: '',
     client_email: '',
     client_phone: '',
-    interview_date: format(new Date(), 'yyyy-MM-dd'),
-    interview_time: '',
     interview_type: 'online' as 'online' | 'in_person',
     notes: '',
     send_confirmation: true
@@ -43,59 +47,76 @@ export default function NewBookingPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Generează toate sloturile de timp posibile
-  const generateTimeSlots = () => {
-    const slots: TimeSlot[] = [];
-    for (let hour = 9; hour < 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        slots.push({ time, available: true });
-      }
+  // Actualizează formData când se schimbă data sau ora din TimeSlotPicker
+  useEffect(() => {
+    if (selectedDate) {
+      setFormData(prev => ({
+        ...prev,
+        interview_date: format(selectedDate, 'yyyy-MM-dd')
+      }));
     }
-    return slots;
-  };
+  }, [selectedDate]);
 
   useEffect(() => {
-    if (formData.interview_date) {
-      checkAvailability();
+    if (selectedTime) {
+      setFormData(prev => ({
+        ...prev,
+        interview_time: selectedTime
+      }));
     }
-  }, [formData.interview_date]);
+  }, [selectedTime]);
 
-  const checkAvailability = async () => {
-    setCheckingAvailability(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `/api/bookings/time-slots/available/${formData.interview_date}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
+  // Verifică email când se modifică
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (formData.client_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.client_email)) {
+        setCheckingEmail(true);
+        try {
+          const response = await axios.get('/bookings/check-client', {
+            params: { email: formData.client_email }
+          });
+          
+          if (response.data.exists && response.data.client) {
+            const client = response.data.client;
+            setExistingUser(client);
+            
+            // Construiește numele complet
+            let fullName = '';
+            if (client.first_name && client.last_name) {
+              fullName = `${client.first_name} ${client.last_name}`;
+            } else if (client.first_name) {
+              fullName = client.first_name;
+            } else if (client.last_name) {
+              fullName = client.last_name;
+            } else {
+              fullName = client.email.split('@')[0];
+            }
+            
+            // Actualizează formData
+            setFormData(prev => ({
+              ...prev,
+              client_name: fullName,
+              client_phone: client.phone || prev.client_phone
+            }));
+            
+            // Afișează mesajul
+            toast.success(`Utilizator găsit: ${fullName}`);
+          } else {
+            setExistingUser(null);
           }
+        } catch (error) {
+          console.error('Error checking email:', error);
+        } finally {
+          setCheckingEmail(false);
         }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const allSlots = generateTimeSlots();
-        
-        // Marchează sloturile ocupate
-        const updatedSlots = allSlots.map(slot => ({
-          ...slot,
-          available: data.availableSlots?.includes(slot.time) !== false
-        }));
-        
-        setAvailableSlots(updatedSlots);
       } else {
-        // În caz de eroare, afișează toate sloturile ca disponibile
-        setAvailableSlots(generateTimeSlots());
+        setExistingUser(null);
       }
-    } catch (error) {
-      console.error('Error checking availability:', error);
-      setAvailableSlots(generateTimeSlots());
-    } finally {
-      setCheckingAvailability(false);
-    }
-  };
+    };
+
+    const debounceTimer = setTimeout(checkEmail, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [formData.client_email]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -112,15 +133,15 @@ export default function NewBookingPage() {
 
     if (!formData.client_phone.trim()) {
       newErrors.client_phone = 'Telefonul este obligatoriu';
-    } else if (!/^(\+40|0)[0-9]{9}$/.test(formData.client_phone.replace(/\s/g, ''))) {
+    } else if (!/^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/im.test(formData.client_phone.replace(/\s/g, ''))) {
       newErrors.client_phone = 'Număr de telefon invalid';
     }
 
-    if (!formData.interview_date) {
+    if (!selectedDate) {
       newErrors.interview_date = 'Data este obligatorie';
     }
 
-    if (!formData.interview_time) {
+    if (!selectedTime) {
       newErrors.interview_time = 'Ora este obligatorie';
     }
 
@@ -138,36 +159,24 @@ export default function NewBookingPage() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          status: 'confirmed', // Pentru programări create din admin, le setăm direct ca confirmate
-          created_by: 'admin'
-        })
+      const response = await axios.post('/bookings', {
+        ...formData,
+        interview_date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+        interview_time: selectedTime,
+        status: 'confirmed', // Pentru programări create din admin, le setăm direct ca confirmate
+        created_by: 'admin'
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to create booking');
-      }
-
-      toast.success('Programare creată cu succes!');
+      toast.success(response.data.message || 'Programare creată cu succes!');
       
       if (formData.send_confirmation) {
         toast.success('Email de confirmare va fi trimis clientului!');
       }
       
       router.push('/admin/bookings');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating booking:', error);
-      toast.error(error instanceof Error ? error.message : 'Eroare la crearea programării');
+      toast.error(error.response?.data?.message || 'Eroare la crearea programării');
     } finally {
       setLoading(false);
     }
@@ -188,10 +197,6 @@ export default function NewBookingPage() {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
-
-  // Datele minime și maxime pentru calendar
-  const minDate = format(new Date(), 'yyyy-MM-dd');
-  const maxDate = format(addDays(new Date(), 90), 'yyyy-MM-dd'); // 90 zile în viitor
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -217,6 +222,16 @@ export default function NewBookingPage() {
           {/* Informații Client */}
           <div>
             <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4">Informații Client</h2>
+            
+            {existingUser && (
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 futuristic:bg-cyan-900/20 border border-blue-200 dark:border-blue-800 futuristic:border-cyan-500/30 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300 futuristic:text-cyan-300">
+                  <AlertCircle className="inline h-4 w-4 mr-1" />
+                  Utilizator existent găsit. Programarea va fi asociată cu contul: {existingUser.email}
+                </p>
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
@@ -260,6 +275,11 @@ export default function NewBookingPage() {
                     } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
                     placeholder="email@exemplu.ro"
                   />
+                  {checkingEmail && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin h-4 w-4 border-b-2 border-gray-600"></div>
+                    </div>
+                  )}
                 </div>
                 {errors.client_email && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.client_email}</p>
@@ -282,7 +302,7 @@ export default function NewBookingPage() {
                         ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
                         : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
                     } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
-                    placeholder="0722123456"
+                    placeholder="+40 7XX XXX XXX sau alt număr internațional"
                   />
                 </div>
                 {errors.client_phone && (
@@ -307,72 +327,25 @@ export default function NewBookingPage() {
             </div>
           </div>
 
-          {/* Programare */}
+          {/* Selector Calendar și Time Slots */}
           <div>
-            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4">Detalii Programare</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                  Data *
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
-                  <input
-                    type="date"
-                    name="interview_date"
-                    value={formData.interview_date}
-                    onChange={handleChange}
-                    min={minDate}
-                    max={maxDate}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
-                      errors.interview_date 
-                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
-                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
-                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
-                  />
-                </div>
-                {errors.interview_date && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.interview_date}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                  Ora *
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
-                  <select
-                    name="interview_time"
-                    value={formData.interview_time}
-                    onChange={handleChange}
-                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-purple-400 focus:border-blue-500 dark:focus:border-blue-400 futuristic:focus:border-purple-400 ${
-                      errors.interview_time 
-                        ? 'border-red-300 dark:border-red-600 futuristic:border-red-500' 
-                        : 'border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30'
-                    } bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100`}
-                    disabled={checkingAvailability}
-                  >
-                    <option value="">Selectează ora</option>
-                    {availableSlots.map(slot => (
-                      <option 
-                        key={slot.time} 
-                        value={slot.time}
-                        disabled={!slot.available}
-                      >
-                        {slot.time} {!slot.available && '(Ocupat)'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {errors.interview_time && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.interview_time}</p>
-                )}
-                {checkingAvailability && (
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">Se verifică disponibilitatea...</p>
-                )}
-              </div>
-            </div>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4">Selectează Data și Ora</h2>
+            
+            {/* Componenta TimeSlotPicker */}
+            <TimeSlotPicker
+              selectedDate={selectedDate}
+              selectedTime={selectedTime}
+              onDateChange={setSelectedDate}
+              onTimeChange={setSelectedTime}
+            />
+            
+            {/* Afișăm erorile pentru dată și oră */}
+            {errors.interview_date && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.interview_date}</p>
+            )}
+            {errors.interview_time && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.interview_time}</p>
+            )}
           </div>
 
           {/* Note adiționale */}
@@ -419,7 +392,7 @@ export default function NewBookingPage() {
                 </h3>
                 <p className="mt-1 text-sm text-blue-700 dark:text-blue-300 futuristic:text-cyan-300/80">
                   Programările create din panoul de administrare sunt automat confirmate.
-                  Clientul va primi un email de confirmare cu detaliile programării.
+                  {existingUser ? ' Programarea va fi asociată cu contul existent.' : ' Dacă clientul nu are cont, se va crea unul automat.'}
                 </p>
               </div>
             </div>

@@ -3,15 +3,17 @@ module.exports = {
     {
       name: 'interview-backend',
       cwd: './backend',
-      script: 'npm',
-      args: 'run dev',
+      script: './dist/server.js',
+      interpreter: 'node',
+      interpreter_args: '-r dotenv/config',
       watch: false,
       env: {
         NODE_ENV: 'production',
+        PORT: 5000
       },
     },
     {
-      name: 'interview-frontend',
+      name: 'interview-frontend', 
       cwd: './frontend',
       script: 'npm',
       args: 'start',

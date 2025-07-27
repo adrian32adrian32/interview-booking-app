@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import emailService from '../services/emailService';
+import { socketService } from '../services/socketService';
 
 const router = Router();
 
@@ -53,6 +55,48 @@ const authMiddleware = async (req: Request, res: Response, next: Function) => {
     return res.status(401).json({ success: false, message: 'Token invalid' });
   }
 };
+
+// Verifică dacă există un client cu email-ul dat (PUBLIC ENDPOINT - NU NECESITĂ AUTENTIFICARE)
+router.get('/check-client', async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.json({ exists: false });
+    }
+    
+    // Caută utilizatorul după email
+    const query = `
+      SELECT id, email, username, first_name, last_name, phone 
+      FROM users 
+      WHERE email = $1 AND status = 'active'
+    `;
+    
+    const result = await pool.query(query, [email]);
+    
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      res.json({
+        exists: true,
+        client: {
+          email: user.email,
+          username: user.username,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone: user.phone
+        }
+      });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error('Error checking client:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Error checking client' 
+    });
+  }
+});
 
 // Get user's own bookings
 router.get('/my-bookings', authMiddleware, async (req: Request, res: Response) => {
@@ -241,6 +285,17 @@ router.post('/', async (req: Request, res: Response) => {
       notes 
     } = req.body;
     
+    // DEBUGGING: Log datele primite
+    console.log('📤 Create booking request received:', {
+      client_name,
+      client_email,
+      client_phone,
+      interview_date,
+      interview_time,
+      interview_type,
+      notes
+    });
+    
     // Validări
     if (!client_name || !client_email || !client_phone || !interview_date || !interview_time) {
       return res.status(400).json({ 
@@ -274,8 +329,9 @@ router.post('/', async (req: Request, res: Response) => {
     );
     
     if (existingBooking.rows.length > 0) {
+      // MESAJ ÎMBUNĂTĂȚIT
       return res.status(400).json({ 
-        error: 'Acest slot de timp este deja rezervat' 
+        error: `Slotul de ${interview_time} din data de ${interview_date} este deja rezervat. Vă rugăm alegeți altă oră.` 
       });
     }
     
@@ -287,13 +343,49 @@ router.post('/', async (req: Request, res: Response) => {
       [client_name, client_email, client_phone, interview_date, interview_time, interview_type || 'online', notes]
     );
     
+    // Obține booking-ul creat
+    const newBooking = result.rows[0];
+    
+    console.log('✅ Booking created successfully:', newBooking.id);
+    
+    // IMPORTANT: Trimite răspunsul IMEDIAT
     res.status(201).json({ 
       success: true, 
       data: result.rows[0],
       message: 'Programarea a fost creată cu succes'
     });
+    
+    // Trimite email-urile în BACKGROUND (după ce am trimis răspunsul)
+    setImmediate(async () => {
+      // Trimite notificare WebSocket către admini
+      socketService.broadcastBookingUpdate('created', newBooking);
+      
+      try {
+        const user = {
+          email: client_email,
+          first_name: client_name.split(' ')[0],
+          last_name: client_name.split(' ').slice(1).join(' ')
+        };
+        
+        // Verifică dacă email-ul este dezactivat
+        if (process.env.DISABLE_EMAIL === 'true') {
+          console.log('📧 Email service disabled - skipping notifications');
+          return;
+        }
+        
+        await emailService.sendBookingConfirmation(newBooking, user);
+        console.log('✅ Confirmation email sent for:', client_email);
+        
+        await emailService.sendAdminNotification(newBooking);
+        console.log('✅ Admin notification sent');
+      } catch (emailError) {
+        console.error('❌ Background email error:', emailError);
+        // Nu face nimic - email-ul a eșuat dar booking-ul s-a creat
+      }
+    });
+    
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('❌ Error creating booking:', error);
     res.status(500).json({ error: 'Failed to create booking' });
   }
 });

@@ -19,6 +19,15 @@ import statisticsRoutes from './routes/statisticsRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import userRoutes from './routes/userRoutes';
 import slotRoutes from './routes/slotRoutes';
+import timeSlotRoutes from './routes/timeSlotRoutes';
+import exportRoutes from './routes/exportRoutes';
+
+// Import services
+import { initCronJobs } from './services/cronJobs';
+import emailService from './services/emailService';
+import { initializeReminderSystem } from './services/reminderService'; // ADĂUGAT
+import { createServer } from 'http';
+import { socketService } from './services/socketService';
 
 // Load environment variables
 dotenv.config();
@@ -575,7 +584,9 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/time-slots', slotRoutes);
+app.use('/api/slots', slotRoutes);
+app.use('/api/time-slots', timeSlotRoutes);
+app.use('/api/export', exportRoutes);
 
 // Upload document endpoint - with rate limiting
 app.post('/api/upload/document', uploadLimiter, async (req: Request, res: Response, next: NextFunction) => {
@@ -685,6 +696,7 @@ app.get('/api/upload/my-documents', async (req: Request, res: Response) => {
     });
   }
 });
+
 // Get documents for specific user (admin endpoint)
 app.get('/api/users/:userId/documents', async (req: Request, res: Response) => {
   try {
@@ -730,7 +742,7 @@ app.get('/api/users/:userId/documents', async (req: Request, res: Response) => {
   }
 });
 
-// Update user (admin) - INCLUDING profile data
+// Update user (admin) - INCLUDING profile data AND PASSWORD
 app.put('/api/users/:id', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -754,16 +766,72 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
     }
     
     const { id } = req.params;
-    const { first_name, last_name, phone, role, status } = req.body;
+    const { first_name, last_name, phone, role, status, password } = req.body;
     
-    // Update user including profile data
-    const result = await pool.query(
-      `UPDATE users 
-       SET first_name = $1, last_name = $2, phone = $3, role = $4, status = $5, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
-       RETURNING id, username, first_name, last_name, email, phone, role, status`,
-      [first_name, last_name, phone, role, status || 'active', id]
-    );
+    // Construim query-ul dinamic în funcție de ce câmpuri sunt trimise
+    let updateFields = [];
+    let queryParams = [];
+    let paramCount = 0;
+
+    // Adăugăm câmpurile care sunt întotdeauna actualizate
+    if (first_name !== undefined) {
+      paramCount++;
+      updateFields.push(`first_name = $${paramCount}`);
+      queryParams.push(first_name);
+    }
+    
+    if (last_name !== undefined) {
+      paramCount++;
+      updateFields.push(`last_name = $${paramCount}`);
+      queryParams.push(last_name);
+    }
+    
+    if (phone !== undefined) {
+      paramCount++;
+      updateFields.push(`phone = $${paramCount}`);
+      queryParams.push(phone);
+    }
+    
+    if (role !== undefined) {
+      paramCount++;
+      updateFields.push(`role = $${paramCount}`);
+      queryParams.push(role);
+    }
+    
+    if (status !== undefined) {
+      paramCount++;
+      updateFields.push(`status = $${paramCount}`);
+      queryParams.push(status);
+    }
+    
+    // Gestionăm parola separat - hash-uim dacă este prezentă
+    if (password && password.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      paramCount++;
+      updateFields.push(`password_hash = $${paramCount}`);
+      queryParams.push(hashedPassword);
+      console.log('🔐 Password will be updated for user ID:', id);
+    }
+    
+    // Adăugăm updated_at
+    updateFields.push('updated_at = CURRENT_TIMESTAMP');
+    
+    // Adăugăm ID-ul la final
+    paramCount++;
+    queryParams.push(id);
+    
+    // Construim și executăm query-ul
+    const updateQuery = `
+      UPDATE users 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING id, username, first_name, last_name, email, phone, role, status
+    `;
+    
+    console.log('📝 Update query:', updateQuery);
+    console.log('📝 Query params count:', queryParams.length);
+    
+    const result = await pool.query(updateQuery, queryParams);
     
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -771,7 +839,8 @@ app.put('/api/users/:id', async (req: Request, res: Response) => {
     
     res.json({
       success: true,
-      user: result.rows[0]
+      user: result.rows[0],
+      message: password ? 'Utilizator și parolă actualizate cu succes!' : 'Utilizator actualizat cu succes!'
     });
   } catch (error) {
     console.error('Error updating user:', error);
@@ -1167,8 +1236,29 @@ async function initializeDatabase() {
         status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled', 'completed')),
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        reminder_24h_sent BOOLEAN DEFAULT FALSE,
+        reminder_1h_sent BOOLEAN DEFAULT FALSE,
+        followup_sent BOOLEAN DEFAULT FALSE
       )
+    `);
+
+    // Adaugă coloanele pentru remindere dacă nu există (pentru baze de date existente)
+    await pool.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='client_bookings' AND column_name='reminder_24h_sent') THEN
+          ALTER TABLE client_bookings ADD COLUMN reminder_24h_sent BOOLEAN DEFAULT FALSE;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='client_bookings' AND column_name='reminder_1h_sent') THEN
+          ALTER TABLE client_bookings ADD COLUMN reminder_1h_sent BOOLEAN DEFAULT FALSE;
+        END IF;
+        
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='client_bookings' AND column_name='followup_sent') THEN
+          ALTER TABLE client_bookings ADD COLUMN followup_sent BOOLEAN DEFAULT FALSE;
+        END IF;
+      END $$;
     `);
 
     // Create documents table
@@ -1199,6 +1289,7 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_bookings_email ON client_bookings(client_email);
       CREATE INDEX IF NOT EXISTS idx_bookings_date ON client_bookings(interview_date);
       CREATE INDEX IF NOT EXISTS idx_bookings_status ON client_bookings(status);
+      CREATE INDEX IF NOT EXISTS idx_bookings_reminders ON client_bookings(interview_date, status) WHERE status = 'confirmed';
       CREATE INDEX IF NOT EXISTS idx_documents_user ON documents(user_id);
       CREATE INDEX IF NOT EXISTS idx_documents_booking ON documents(booking_id);
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -1244,22 +1335,32 @@ async function initializeDatabase() {
   }
 }
 
+// Create HTTP server and initialize Socket.io
+const httpServer = createServer(app);
+socketService.initialize(httpServer);
+
 // Start server
-const server = app.listen(PORT, () => {
+const server = httpServer.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://94.156.250.138'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}`);
   console.log(`🔒 Rate limiting: ${process.env.NODE_ENV === 'production' ? 'Enabled' : 'Disabled in development'}`);
-  
+  console.log(`🔔 Socket.io: Enabled`);
+
   // Initialize database
   initializeDatabase();
+  // Initialize cron jobs
+  initCronJobs();
+  // Initialize reminder system
+  initializeReminderSystem();
 });
+  
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
   console.log('📴 SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('🛑 HTTP server closed');
     pool.end(() => {
       console.log('🛑 Database pool has ended');
@@ -1270,7 +1371,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('📴 SIGINT signal received: closing HTTP server');
-  server.close(() => {
+  httpServer.close(() => {
     console.log('🛑 HTTP server closed');
     pool.end(() => {
       console.log('🛑 Database pool has ended');

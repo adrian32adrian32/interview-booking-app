@@ -8,9 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '@/lib/axios';
 import Cookies from 'js-cookie';
-import axios from '@/lib/axios';
-import { useAuth } from '@/hooks/useAuth';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalid'),
@@ -22,7 +21,6 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loginMessage, setLoginMessage] = useState<{type: 'error' | 'success', message: string | React.ReactNode} | null>(null);
@@ -35,118 +33,97 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  // Funcție de login
+  const performLogin = async (email: string, password: string) => {
+    console.log('🔐 Starting login for:', email);
+    
+    try {
+      const response = await api.post('/auth/login', {
+        email,
+        password
+      });
+
+      console.log('📥 Login response:', response.data);
+
+      if (response.data.success) {
+        const { token, user } = response.data;
+        
+        // Salvăm în localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Salvăm în cookies
+        Cookies.set('token', token, { expires: 7 });
+        Cookies.set('user', JSON.stringify(user), { expires: 7 });
+        
+        // Setăm header-ul pentru axios
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        toast.success('Autentificare reușită!');
+        
+        // Redirect bazat pe rol
+        setTimeout(() => {
+          const redirectPath = user.role === 'admin' ? '/admin/dashboard' : '/dashboard';
+          console.log('🚀 Redirecting to:', redirectPath);
+          router.push(redirectPath);
+        }, 1000);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      throw error;
+    }
+  };
+
   const onSubmit = async (data: LoginFormData) => {
-    console.log('📧 Starting login with:', data.email);
+    console.log('📧 Form submitted with:', data.email);
     
     setLoading(true);
     setLoginMessage(null);
     
     try {
-      // Folosim axios în loc de fetch
-      const response = await axios.post('/auth/login', {
-        email: data.email,
-        password: data.password
-      });
-
-      console.log('📦 Server response:', response.data);
-
-      if (response.data.success) {
-        console.log('✅ Login successful!');
-        
-        const userData = response.data.user;
-        const token = response.data.token;
-        
-        if (!userData || !token) {
-          console.error('❌ Invalid response structure');
-          throw new Error('Date invalide de la server');
-        }
-        
-        // Salvăm în localStorage și cookies
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        // Salvăm și în cookies cu opțiunea remember me
-        const cookieOptions = data.rememberMe 
-          ? { path: '/', expires: 30 } // 30 zile
-          : { path: '/' }; // Session cookie
-          
-        Cookies.set('token', token, cookieOptions);
-        Cookies.set('user', JSON.stringify(userData), cookieOptions);
-        
-        setLoginMessage({
-          type: 'success',
-          message: 'Autentificare reușită! Te redirecționăm...'
-        });
-        
-        toast.success('Bine ai revenit!');
-        
-        // Folosim funcția login din context dacă există
-        if (login) {
-          await login(data.email, data.password);
-        }
-        
-        // Redirect bazat pe rol
-        setTimeout(() => {
-          const redirectUrl = userData.role === 'admin' 
-            ? '/admin/dashboard' 
-            : '/dashboard';
-          
-          console.log('🔀 Redirecting to:', redirectUrl);
-          router.push(redirectUrl);
-        }, 1000);
-        
-      } else {
-        console.error('❌ Login failed:', response.data.message);
-        setLoginMessage({
-          type: 'error',
-          message: response.data.message || 'Email sau parolă incorectă!'
-        });
-      }
-    } catch (error: any) {
-      console.error('💥 Login error:', error);
+      await performLogin(data.email, data.password);
       
-      const errorMessage = error.response?.data?.message || 'Eroare la conectare. Verifică datele și încearcă din nou.';
+      setLoginMessage({
+        type: 'success',
+        message: 'Autentificare reușită! Te redirecționăm...'
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Login error:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Eroare la conectare. Verifică datele și încearcă din nou.';
       
       setLoginMessage({
         type: 'error',
         message: errorMessage
       });
-      
-      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Test direct pentru admin - pentru development
-  const loginAsAdmin = async () => {
-    console.log('🔐 Quick admin login...');
+  // Funcție pentru login rapid (butoane de test)
+  const quickLogin = async (email: string, password: string) => {
+    console.log('⚡ Quick login for:', email);
     setLoading(true);
+    setLoginMessage(null);
     
     try {
-      const response = await axios.post('/auth/login', {
-        email: 'admin@interview-app.com',
-        password: 'admin123'
-      });
+      await performLogin(email, password);
       
-      if (response.data.success) {
-        const userData = response.data.user;
-        const token = response.data.token;
-        
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        Cookies.set('token', token, { path: '/', expires: 7 });
-        Cookies.set('user', JSON.stringify(userData), { path: '/', expires: 7 });
-        
-        toast.success('Autentificare admin reușită!');
-        
-        setTimeout(() => {
-          router.push('/admin/dashboard');
-        }, 1000);
-      }
+      setLoginMessage({
+        type: 'success',
+        message: 'Autentificare reușită! Te redirecționăm...'
+      });
     } catch (error) {
-      console.error('Admin login error:', error);
-      toast.error('Eroare la autentificare admin');
+      console.error('Quick login error:', error);
+      toast.error('Eroare la autentificare');
     } finally {
       setLoading(false);
     }
@@ -285,21 +262,33 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Buton pentru login rapid ca admin - doar în development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <p className="text-xs text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 text-center mb-2">
-            Development Only
-          </p>
+      {/* Butoane pentru login rapid - pentru development/testing */}
+      <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
+        <p className="text-xs text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 text-center mb-4">
+          Conturi de test
+        </p>
+        <div className="space-y-2">
           <button
-            onClick={loginAsAdmin}
+            type="button"
+            onClick={() => quickLogin('admin@example.com', 'admin123')}
             disabled={loading}
             className="w-full px-4 py-2 bg-purple-600 dark:bg-purple-700 futuristic:bg-gradient-to-r futuristic:from-purple-600 futuristic:to-pink-600 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 futuristic:hover:from-purple-700 futuristic:hover:to-pink-700 disabled:opacity-50 text-sm transition-colors"
           >
-            Login Rapid ca Admin (admin@interview-app.com)
+            Login ca Admin (admin@example.com)
+          </button>
+          <button
+            type="button"
+            onClick={() => quickLogin('test@example.com', 'test123')}
+            disabled={loading}
+            className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 futuristic:bg-gradient-to-r futuristic:from-blue-600 futuristic:to-cyan-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:from-blue-700 futuristic:hover:to-cyan-700 disabled:opacity-50 text-sm transition-colors"
+          >
+            Login ca User (test@example.com)
           </button>
         </div>
-      )}
+      </div>
     </>
   );
 }
+
+// Forțăm rendering dinamic pentru a evita problemele de pre-rendering
+export const dynamic = 'force-dynamic';

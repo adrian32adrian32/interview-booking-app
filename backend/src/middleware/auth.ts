@@ -39,4 +39,27 @@ export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunct
   next();
 };
 
+// Adaugă această funcție înainte de "export default authMiddleware;"
+export const authorize = (roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Mai întâi verifică dacă utilizatorul este autentificat
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Nu ești autentificat'
+      });
+    }
+
+    // Apoi verifică dacă are rolul necesar
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Nu ai permisiunea să accesezi această resursă'
+      });
+    }
+
+    next();
+  };
+};
+
 export default authMiddleware;

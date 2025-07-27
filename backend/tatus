@@ -1,0 +1,5 @@
+ id |           email            |                        password_hash                         | role | status 
+----+----------------------------+--------------------------------------------------------------+------+--------
+ 65 | adrian32adrian32@gmail.com | $2b$10$dNj01LSV0AN1oqaSruwI9u7P/zAHWqT7JmKF7.jy8M0G3eXNeoU76 | user | active
+(1 row)
+

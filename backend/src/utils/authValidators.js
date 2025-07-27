@@ -29,7 +29,12 @@ const validateRegister = [
     .isLength({ min: 2, max: 50 })
     .withMessage('Prenumele trebuie să aibă între 2 și 50 de caractere')
     .matches(/^[a-zA-ZăâîșțĂÂÎȘȚ\s-]+$/)
-    .withMessage('Prenumele poate conține doar litere, spații și cratime')
+    .withMessage('Prenumele poate conține doar litere, spații și cratime'),
+  
+  body('phone')
+    .optional()
+    .matches(/^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/im)
+    .withMessage('Număr de telefon invalid')
 ];
 
 // Validatoare pentru login
@@ -100,8 +105,46 @@ const validateUpdateProfile = [
   
   body('phone')
     .optional()
-    .matches(/^(\+4|0)[0-9]{9,10}$/)
-    .withMessage('Număr de telefon invalid')
+    .matches(/^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/im)
+    .withMessage('Număr de telefon invalid (acceptăm numere internaționale)')
+];
+
+// Validator pentru creare programare
+const validateBooking = [
+  body('client_name')
+    .trim()
+    .notEmpty()
+    .withMessage('Numele este obligatoriu')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Numele trebuie să aibă între 2 și 100 de caractere'),
+  
+  body('client_email')
+    .isEmail()
+    .withMessage('Email invalid')
+    .normalizeEmail(),
+  
+  body('client_phone')
+    .notEmpty()
+    .withMessage('Telefonul este obligatoriu')
+    .matches(/^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/im)
+    .withMessage('Număr de telefon invalid (acceptăm numere internaționale)'),
+  
+  body('interview_date')
+    .notEmpty()
+    .withMessage('Data este obligatorie')
+    .isISO8601()
+    .withMessage('Format dată invalid'),
+  
+  body('interview_time')
+    .notEmpty()
+    .withMessage('Ora este obligatorie')
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Format oră invalid (HH:MM)'),
+  
+  body('interview_type')
+    .optional()
+    .isIn(['online', 'in_person', 'onsite'])
+    .withMessage('Tip interviu invalid')
 ];
 
 // Middleware pentru a procesa erorile de validare
@@ -129,5 +172,6 @@ module.exports = {
   validateResetPassword,
   validateChangePassword,
   validateUpdateProfile,
+  validateBooking,
   handleValidationErrors
 };
