@@ -1,5 +1,0 @@
- id | client_name |        client_email        | client_phone | interview_date | interview_time | interview_type |  status   | notes |         created_at         |         updated_at         
-----+-------------+----------------------------+--------------+----------------+----------------+----------------+-----------+-------+----------------------------+----------------------------
-  1 | david       | adrian32adrian32@gmail.com | 0722222222   | 2025-07-27     | 17:00          | online         | confirmed |       | 2025-07-18 23:20:20.952539 | 2025-07-24 22:25:40.302017
-(1 row)
-
