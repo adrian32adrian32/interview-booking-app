@@ -1,10 +1,14 @@
+'use client';
+
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 futuristic:bg-background transition-colors duration-300">
       {/* Theme toggle în colțul din dreapta sus */}
@@ -21,7 +25,7 @@ export default function AuthLayout({
               Interview Booking
             </h2>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 futuristic:text-muted-foreground">
-              Sistem de programare pentru interviuri
+              Interview scheduling system
             </p>
           </div>
           

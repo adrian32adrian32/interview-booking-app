@@ -326,6 +326,116 @@ export const updateBooking = async (req: Request, res: Response) => {
   }
 };
 
+// FUNCȚIE NOUĂ: Reprogramează o programare cu opțiune de email
+export const rescheduleBooking = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { 
+      interview_date, 
+      interview_time, 
+      send_email, 
+      old_date, 
+      old_time,
+      client_email,
+      client_name,
+      status 
+    } = req.body;
+
+    // Verifică dacă programarea există
+    const existingBookingResult = await pool.query(
+      'SELECT * FROM bookings WHERE id = $1',
+      [id]
+    );
+
+    if (existingBookingResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Programarea nu a fost găsită' 
+      });
+    }
+
+    const existingBooking = existingBookingResult.rows[0];
+
+    // Verifică dacă noul slot este disponibil
+    const slotCheck = await pool.query(
+      'SELECT * FROM bookings WHERE interview_date = $1 AND interview_time = $2 AND status != $3 AND id != $4',
+      [interview_date, interview_time, 'cancelled', id]
+    );
+
+    if (slotCheck.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Noul slot este deja rezervat',
+      });
+    }
+
+    // Actualizează programarea în baza de date
+    const result = await pool.query(
+      `UPDATE bookings 
+       SET interview_date = $1, interview_time = $2, status = $3, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING *`,
+      [interview_date, interview_time, status || existingBooking.status, id]
+    );
+
+    const updatedBooking = result.rows[0];
+
+    // Trimite notificare Socket.io pentru reprogramare
+    socketService.broadcastBookingUpdate('rescheduled', {
+      ...updatedBooking,
+      old_date: existingBooking.interview_date,
+      old_time: existingBooking.interview_time
+    });
+
+    // Trimite email dacă este solicitat
+    if (send_email && (client_email || existingBooking.client_email)) {
+      try {
+        const emailTo = client_email || existingBooking.client_email;
+        const clientFullName = client_name || existingBooking.client_name;
+        
+        // Trimite email de reprogramare
+        await emailService.sendRescheduleEmail({
+          booking: updatedBooking,
+          oldDate: old_date || existingBooking.interview_date,
+          oldTime: old_time || existingBooking.interview_time,
+          clientEmail: emailTo,
+          clientName: clientFullName
+        });
+
+        console.log(`✅ Email de reprogramare trimis către ${emailTo}`);
+
+        // Trimite și notificare admin despre reprogramare
+        await emailService.sendAdminRescheduleNotification({
+          booking: updatedBooking,
+          oldDate: old_date || existingBooking.interview_date,
+          oldTime: old_time || existingBooking.interview_time
+        });
+
+      } catch (emailError) {
+        console.error('❌ Eroare la trimiterea emailului de reprogramare:', emailError);
+        // Nu oprim procesul dacă emailul eșuează
+      }
+    }
+
+    res.json({
+      success: true,
+      message: send_email 
+        ? 'Programare reprogramată cu succes și email trimis!' 
+        : 'Programare reprogramată cu succes!',
+      booking: updatedBooking,
+      data: updatedBooking
+    });
+
+  } catch (error) {
+    console.error('Error rescheduling booking:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Eroare la reprogramarea interviului',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
 // Șterge o programare
 export const deleteBooking = async (req: Request, res: Response) => {
   try {

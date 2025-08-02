@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -40,6 +41,7 @@ interface Document {
 }
 
 export default function DashboardPage() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -101,7 +103,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
-      setError('Eroare la încărcarea datelor utilizatorului');
+      setError(t('errors.loadingUserData'));
     }
   };
 
@@ -193,7 +195,7 @@ export default function DashboardPage() {
         <div className="flex">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-900 dark:text-red-200">Eroare</h3>
+            <h3 className="text-sm font-medium text-red-900 dark:text-red-200">{t('common.error')}</h3>
             <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
           </div>
         </div>
@@ -214,10 +216,10 @@ export default function DashboardPage() {
       {/* Welcome section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Bine ai venit, {user?.firstName || user?.first_name || user?.username || 'Utilizator'}!
+          {t('dashboard.welcome')}, {user?.firstName || user?.first_name || user?.username || t('common.user')}!
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Aici poți gestiona programările tale și documentele necesare pentru interviu.
+          {t('dashboard.userSubtitle')}
         </p>
       </div>
 
@@ -228,15 +230,20 @@ export default function DashboardPage() {
             <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                Următoarea programare
+                {t('dashboard.nextBooking')}
               </h3>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                {new Date(nextBooking.interview_date).toLocaleDateString('ro-RO', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })} la ora {nextBooking.interview_time} - {nextBooking.interview_type}
+                {new Date(nextBooking.interview_date).toLocaleDateString(
+                  language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : `${language}-${language.toUpperCase()}`,
+                  {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  }
+                )} {t('common.at')} {nextBooking.interview_time} - {
+                  nextBooking.interview_type === 'online' ? t('common.online') : t('common.inPerson')
+                }
               </p>
             </div>
           </div>
@@ -249,7 +256,7 @@ export default function DashboardPage() {
           <div className="flex items-center">
             <Calendar className="h-10 w-10 text-blue-600" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Programări totale</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.totalBookings')}</p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalBookings}</p>
             </div>
           </div>
@@ -259,7 +266,7 @@ export default function DashboardPage() {
           <div className="flex items-center">
             <FileText className="h-10 w-10 text-green-600" />
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Documente încărcate</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.uploadedDocuments')}</p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.documentsUploaded}</p>
             </div>
           </div>
@@ -273,9 +280,9 @@ export default function DashboardPage() {
               <AlertCircle className="h-10 w-10 text-yellow-600" />
             )}
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Profil</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('profile.status')}</p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                {stats.profileComplete ? 'Complet' : 'Incomplet'}
+                {stats.profileComplete ? t('common.complete') : t('common.incomplete')}
               </p>
             </div>
           </div>
@@ -289,13 +296,13 @@ export default function DashboardPage() {
           className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-md transition-shadow group"
         >
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600">
-            Programează un interviu
+            {t('dashboard.scheduleInterview')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Alege data și ora care ți se potrivește cel mai bine.
+            {t('dashboard.chooseDateTime')}
           </p>
           <span className="text-blue-600 font-medium flex items-center">
-            Programează acum
+            {t('dashboard.scheduleNow')}
             <ArrowRight className="h-4 w-4 ml-1" />
           </span>
         </Link>
@@ -305,13 +312,13 @@ export default function DashboardPage() {
           className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-md transition-shadow group"
         >
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600">
-            Încarcă documente
+            {t('dashboard.uploadDocuments')}
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Încarcă documentele necesare pentru interviu.
+            {t('dashboard.uploadNecessaryDocuments')}
           </p>
           <span className="text-blue-600 font-medium flex items-center">
-            Mergi la documente
+            {t('dashboard.goToDocuments')}
             <ArrowRight className="h-4 w-4 ml-1" />
           </span>
         </Link>
@@ -321,7 +328,7 @@ export default function DashboardPage() {
       {bookings.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Programări recente</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.recentBookings')}</h2>
           </div>
           <div className="p-6">
             <div className="space-y-3">
@@ -329,19 +336,23 @@ export default function DashboardPage() {
                 <div key={booking.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date(booking.interview_date).toLocaleDateString('ro-RO')} - {booking.interview_time}
+                      {new Date(booking.interview_date).toLocaleDateString(
+                        language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : `${language}-${language.toUpperCase()}`
+                      )} - {booking.interview_time}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {booking.interview_type} - {booking.status === 'confirmed' ? 'Confirmat' : 
-                        booking.status === 'pending' ? 'În așteptare' : 
-                        booking.status === 'cancelled' ? 'Anulat' : booking.status}
+                      {booking.interview_type === 'online' ? t('common.online') : t('common.inPerson')} - {
+                        booking.status === 'confirmed' ? t('dashboard.confirmed') : 
+                        booking.status === 'pending' ? t('common.pending') : 
+                        booking.status === 'cancelled' ? t('dashboard.cancelled') : booking.status
+                      }
                     </p>
                   </div>
                   <Link 
                     href="/bookings"
                     className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                   >
-                    Vezi detalii
+                    {t('dashboard.viewDetails')}
                   </Link>
                 </div>
               ))}
@@ -351,7 +362,7 @@ export default function DashboardPage() {
                 href="/bookings"
                 className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-700 font-medium"
               >
-                Vezi toate programările
+                {t('dashboard.viewAllBookings')}
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             )}
@@ -366,16 +377,16 @@ export default function DashboardPage() {
             <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
             <div className="ml-3">
               <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
-                Completează-ți profilul
+                {t('dashboard.completeYourProfile')}
               </h3>
               <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                Te rugăm să încarci toate documentele necesare pentru a finaliza procesul de aplicare.
+                {t('dashboard.uploadAllDocuments')}
               </p>
               <Link 
                 href="/documents"
                 className="mt-2 inline-flex items-center text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:underline"
               >
-                Încarcă documente
+                {t('dashboard.uploadDocuments')}
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Link>
             </div>

@@ -5,8 +5,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import axios from '@/lib/axios';
-import { toast } from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
 
@@ -33,6 +34,7 @@ interface CalendarEvent {
 }
 
 export default function BookingCalendar() {
+  const { t } = useLanguage();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -77,7 +79,7 @@ export default function BookingCalendar() {
       
       setEvents(calendarEvents);
     } catch (error) {
-      toast.error('Eroare la încărcarea programărilor');
+      toastService.error('error.loadingBookings');
     } finally {
       setLoading(false);
     }
@@ -107,10 +109,10 @@ export default function BookingCalendar() {
         interview_time: newTime
       });
       
-      toast.success('Programare actualizată cu succes!');
+      toastService.success('success.generic', 'Programare actualizată cu succes!');
       fetchBookings(); // Refresh
     } catch (error) {
-      toast.error('Eroare la actualizarea programării');
+      toastService.error('error.updateBooking');
       info.revert(); // Revert la poziția originală
     }
   };
@@ -133,7 +135,7 @@ export default function BookingCalendar() {
           <div className="flex gap-4 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-green-500 rounded"></div>
-              <span>Confirmate</span>
+              <span>{t('calendar.confirmate')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-amber-500 rounded"></div>
@@ -141,11 +143,11 @@ export default function BookingCalendar() {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-blue-500 rounded"></div>
-              <span>Completate</span>
+              <span>{t('calendar.completate')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 bg-red-500 rounded"></div>
-              <span>Anulate</span>
+              <span>{t('calendar.anulate')}</span>
             </div>
           </div>
         </div>
@@ -191,7 +193,7 @@ export default function BookingCalendar() {
       {showModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full m-4">
-            <h3 className="text-xl font-bold mb-4">Detalii Programare</h3>
+            <h3 className="text-xl font-bold mb-4">{t('calendar.detalii_programare')}</h3>
             
             <div className="space-y-3">
               <div>

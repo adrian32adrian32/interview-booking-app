@@ -1,6 +1,7 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -21,6 +22,7 @@ import userRoutes from './routes/userRoutes';
 import slotRoutes from './routes/slotRoutes';
 import timeSlotRoutes from './routes/timeSlotRoutes';
 import exportRoutes from './routes/exportRoutes';
+import emailTemplateRoutes from './routes/emailTemplateRoutes';
 
 // Import services
 import { initCronJobs } from './services/cronJobs';
@@ -587,6 +589,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/slots', slotRoutes);
 app.use('/api/time-slots', timeSlotRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/emails', emailTemplateRoutes);
 
 // Upload document endpoint - with rate limiting
 app.post('/api/upload/document', uploadLimiter, async (req: Request, res: Response, next: NextFunction) => {

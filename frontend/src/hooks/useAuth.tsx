@@ -2,9 +2,10 @@
 
 import Cookies from 'js-cookie';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios'; // Folosim instanța configurată
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 interface User {
   id: number;
@@ -52,6 +53,7 @@ interface LoginResponse {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -199,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         
         // Afișează mesaj de succes
-        toast.success('Autentificare reușită!');
+        toastService.success('success.generic', 'Autentificare reușită!');
         
         // Returnează structura pentru pagina de login
         return {
@@ -221,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Afișează mesaj de eroare
       const errorMessage = error.response?.data?.message || 'Eroare la autentificare';
-      toast.error(errorMessage);
+      toastService.error('error.generic', errorMessage);
       
       return {
         success: false,
@@ -256,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Redirect
     router.push('/login');
-    toast.success('Ai fost deconectat cu succes!');
+    toastService.success('success.generic', 'Ai fost deconectat cu succes!');
   };
 
   return (
@@ -266,10 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// Funcția useAuth a fost mutată în AuthContext.tsx pentru a evita duplicarea
+// export const useAuth = () => { ... }
+// Re-export from AuthContext to avoid duplication
+export { useAuth } from '@/contexts/AuthContext';

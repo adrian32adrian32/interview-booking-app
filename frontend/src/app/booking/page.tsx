@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Calendar, Clock, User, Mail, Phone, FileText, CheckCircle, AlertCircle, ArrowLeft, Home, CalendarDays, FileStack, UserCircle, Menu, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import Link from 'next/link';
 import TimeSlotPicker from '@/components/booking/TimeSlotPicker';
 import { format } from 'date-fns';
+import { ro, enUS, it, fr, de, es, ru, uk } from 'date-fns/locale';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138:5000/api';
 
@@ -28,13 +30,14 @@ interface UserData {
 
 // Mini sidebar pentru user
 const UserSidebar = ({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) => {
+  const { t } = useLanguage();
   const router = useRouter();
   
   const menuItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Programările mele', href: '/bookings', icon: CalendarDays },
-    { name: 'Documentele mele', href: '/documents', icon: FileStack },
-    { name: 'Profil', href: '/profile', icon: UserCircle },
+    { name: t('sidebar.dashboard'), href: '/dashboard', icon: Home },
+    { name: t('sidebar.myBookings'), href: '/bookings', icon: CalendarDays },
+    { name: t('sidebar.myDocuments'), href: '/documents', icon: FileStack },
+    { name: t('sidebar.profile'), href: '/profile', icon: UserCircle },
   ];
 
   return (
@@ -66,6 +69,7 @@ const UserSidebar = ({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => vo
 };
 
 export default function BookingPage() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -87,6 +91,21 @@ export default function BookingPage() {
   });
 
   const [errors, setErrors] = useState<any>({});
+
+  // Helper function pentru date locale
+  const getDateLocale = () => {
+    switch (language) {
+      case 'ro': return ro;
+      case 'en': return enUS;
+      case 'it': return it;
+      case 'fr': return fr;
+      case 'de': return de;
+      case 'es': return es;
+      case 'ru': return ru;
+      case 'uk': return uk;
+      default: return enUS;
+    }
+  };
 
   // Prelua datele utilizatorului logat
   useEffect(() => {
@@ -172,7 +191,7 @@ export default function BookingPage() {
             }));
             
             // Afișează mesaj
-            toast.success(`Bun venit înapoi, ${fullName}! Datele tale au fost completate automat.`);
+            toastService.success('success.generic', `${t('booking.welcomeBack')}, ${fullName}!`);
           }
         } catch (error) {
           console.error('Error checking email:', error);
@@ -184,7 +203,7 @@ export default function BookingPage() {
     
     const debounceTimer = setTimeout(checkEmail, 500);
     return () => clearTimeout(debounceTimer);
-  }, [formData.client_email, isLoggedIn]);
+  }, [formData.client_email, isLoggedIn, t]);
 
   // Sincronizează selectedDate și selectedTime cu formData
   useEffect(() => {
@@ -211,28 +230,28 @@ export default function BookingPage() {
     
     if (currentStep === 1) {
       if (!formData.client_name.trim()) {
-        newErrors.client_name = 'Numele este obligatoriu';
+        newErrors.client_name = t('booking.errors.nameRequired');
       }
       
       if (!formData.client_email.trim()) {
-        newErrors.client_email = 'Email-ul este obligatoriu';
+        newErrors.client_email = t('booking.errors.emailRequired');
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.client_email)) {
-        newErrors.client_email = 'Email-ul nu este valid';
+        newErrors.client_email = t('booking.errors.emailInvalid');
       }
       
       if (!formData.client_phone.trim()) {
-        newErrors.client_phone = 'Telefonul este obligatoriu';
+        newErrors.client_phone = t('booking.errors.phoneRequired');
       } else if (!/^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/im.test(formData.client_phone.replace(/\s/g, ''))) {
-        newErrors.client_phone = 'Numărul de telefon nu este valid';
+        newErrors.client_phone = t('booking.errors.phoneInvalid');
       }
     }
     
     if (currentStep === 2) {
       if (!formData.interview_date) {
-        newErrors.interview_date = 'Selectați o dată';
+        newErrors.interview_date = t('booking.errors.dateRequired');
       }
       if (!formData.interview_time) {
-        newErrors.interview_time = 'Selectați o oră';
+        newErrors.interview_time = t('booking.errors.timeRequired');
       }
     }
     
@@ -275,7 +294,7 @@ export default function BookingPage() {
       console.log('✅ Booking response:', response.data);
       
       if (response.data.success) {
-        toast.success('Programare creată cu succes!');
+        toastService.success('success.generic', t('booking.bookingCreated'));
         setStep(4); // Success step
         
         // Redirect după 3 secunde
@@ -292,13 +311,13 @@ export default function BookingPage() {
       console.error('❌ Error response:', error.response?.data);
       
       // Show more detailed error message
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Eroare la crearea programării';
-      toast.error(errorMessage);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || t('booking.errors.createError');
+      toastService.error('error.generic', errorMessage);
       
       // If it's a slot already taken error, you might want to refresh the time slots
-      if (errorMessage.includes('rezervat')) {
+      if (errorMessage.includes('rezervat') || errorMessage.includes('taken') || errorMessage.includes('occupé')) {
         // Optionally trigger a refresh of available time slots
-        toast('💡 Încercați să selectați alt slot de timp', { icon: '💡' });
+        toastService.info('info.generic', t('booking.tryAnotherSlot'));
       }
     } finally {
       setLoading(false);
@@ -306,12 +325,15 @@ export default function BookingPage() {
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ro-RO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return date.toLocaleDateString(
+      language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : `${language}-${language.toUpperCase()}`,
+      {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }
+    );
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -360,7 +382,7 @@ export default function BookingPage() {
               >
                 <Menu className="h-6 w-6" />
               </button>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Programare Nouă</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('booking.newBooking')}</h1>
               <div className="w-6"></div>
             </div>
           </div>
@@ -376,17 +398,17 @@ export default function BookingPage() {
                 className="hidden lg:flex mb-6 items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Înapoi la dashboard
+                {t('booking.backToDashboard')}
               </button>
             )}
 
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                Programează un interviu
+                {t('booking.title')}
               </h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Completează formularul pentru a-ți programa interviul
+                {t('booking.subtitle')}
               </p>
             </div>
 
@@ -399,7 +421,7 @@ export default function BookingPage() {
                   }`}>
                     1
                   </div>
-                  <span className="ml-2 font-medium hidden sm:inline">Date personale</span>
+                  <span className="ml-2 font-medium hidden sm:inline">{t('booking.steps.personalInfo')}</span>
                 </div>
                 
                 <div className={`w-16 sm:w-24 h-1 mx-2 sm:mx-4 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`} />
@@ -410,7 +432,7 @@ export default function BookingPage() {
                   }`}>
                     2
                   </div>
-                  <span className="ml-2 font-medium hidden sm:inline">Programare</span>
+                  <span className="ml-2 font-medium hidden sm:inline">{t('booking.steps.schedule')}</span>
                 </div>
                 
                 <div className={`w-16 sm:w-24 h-1 mx-2 sm:mx-4 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`} />
@@ -421,7 +443,7 @@ export default function BookingPage() {
                   }`}>
                     3
                   </div>
-                  <span className="ml-2 font-medium hidden sm:inline">Confirmare</span>
+                  <span className="ml-2 font-medium hidden sm:inline">{t('booking.steps.confirmation')}</span>
                 </div>
               </div>
             </div>
@@ -432,14 +454,14 @@ export default function BookingPage() {
               {step === 1 && (
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                    Date personale
+                    {t('booking.personalInfo')}
                   </h2>
                   
                   {isLoggedIn && userData && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
                       <p className="text-sm text-blue-800 dark:text-blue-300">
-                        Datele tale de contact sunt preluate automat din cont.
-                        {!formData.client_phone && ' Te rugăm să completezi numărul de telefon.'}
+                        {t('booking.dataFromAccount')}
+                        {!formData.client_phone && ' ' + t('booking.pleaseAddPhone')}
                       </p>
                     </div>
                   )}
@@ -447,7 +469,7 @@ export default function BookingPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       <User className="inline w-4 h-4 mr-1" />
-                      Nume complet *
+                      {t('booking.fullName')} *
                     </label>
                     <input
                       type="text"
@@ -460,7 +482,7 @@ export default function BookingPage() {
                       } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
                         isLoggedIn ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''
                       }`}
-                      placeholder="Ex: Ion Popescu"
+                      placeholder={t('booking.namePlaceholder')}
                     />
                     {errors.client_name && (
                       <p className="mt-1 text-sm text-red-600">{errors.client_name}</p>
@@ -470,7 +492,7 @@ export default function BookingPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       <Mail className="inline w-4 h-4 mr-1" />
-                      Email *
+                      {t('common.email')} *
                     </label>
                     <div className="relative">
                       <input
@@ -484,7 +506,7 @@ export default function BookingPage() {
                         } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
                           isLoggedIn ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''
                         }`}
-                        placeholder="exemplu@email.com"
+                        placeholder={t('booking.emailPlaceholder')}
                       />
                       {checkingEmail && !isLoggedIn && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -500,7 +522,7 @@ export default function BookingPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       <Phone className="inline w-4 h-4 mr-1" />
-                      Telefon *
+                      {t('common.phone')} *
                     </label>
                     <input
                       type="tel"
@@ -513,14 +535,14 @@ export default function BookingPage() {
                       } bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
                         isLoggedIn && formData.client_phone !== '' ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed' : ''
                       }`}
-                      placeholder="+40 7XX XXX XXX sau orice număr internațional"
+                      placeholder={t('booking.phonePlaceholder')}
                     />
                     {errors.client_phone && (
                       <p className="mt-1 text-sm text-red-600">{errors.client_phone}</p>
                     )}
                     {isLoggedIn && !formData.client_phone && (
                       <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
-                        Te rugăm să completezi numărul de telefon în profilul tău pentru a nu mai fi nevoit să-l introduci de fiecare dată.
+                        {t('booking.addPhoneToProfile')}
                       </p>
                     )}
                   </div>
@@ -530,13 +552,13 @@ export default function BookingPage() {
                       onClick={() => router.push(isLoggedIn ? '/dashboard' : '/')}
                       className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      Anulează
+                      {t('common.cancel')}
                     </button>
                     <button
                       onClick={handleNext}
                       className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Următorul pas →
+                      {t('booking.nextStep')} →
                     </button>
                   </div>
                 </div>
@@ -546,7 +568,7 @@ export default function BookingPage() {
               {step === 2 && (
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                    Alege data și ora
+                    {t('booking.chooseDateTime')}
                   </h2>
                   
                   {/* Folosim TimeSlotPicker care respectă configurările din admin */}
@@ -567,7 +589,7 @@ export default function BookingPage() {
                   
                   <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Tip interviu
+                      {t('booking.interviewType')}
                     </label>
                     <select
                       name="interview_type"
@@ -575,15 +597,15 @@ export default function BookingPage() {
                       onChange={handleInputChange}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
-                      <option value="online">Online (Video Call)</option>
-                      <option value="in_person">În persoană (La birou)</option>
+                      <option value="online">{t('booking.online')}</option>
+                      <option value="in_person">{t('booking.inPerson')}</option>
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       <FileText className="inline w-4 h-4 mr-1" />
-                      Note adiționale (opțional)
+                      {t('booking.additionalNotes')}
                     </label>
                     <textarea
                       name="notes"
@@ -591,7 +613,7 @@ export default function BookingPage() {
                       onChange={handleInputChange}
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      placeholder="Informații adiționale despre interviu..."
+                      placeholder={t('booking.notesPlaceholder')}
                     />
                   </div>
                   
@@ -600,13 +622,13 @@ export default function BookingPage() {
                       onClick={handleBack}
                       className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      ← Înapoi
+                      ← {t('common.back')}
                     </button>
                     <button
                       onClick={handleNext}
                       className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Următorul pas →
+                      {t('booking.nextStep')} →
                     </button>
                   </div>
                 </div>
@@ -616,44 +638,44 @@ export default function BookingPage() {
               {step === 3 && (
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                    Confirmă programarea
+                    {t('booking.confirmBooking')}
                   </h2>
                   
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 space-y-4">
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Rezumat programare:</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">{t('booking.bookingSummary')}:</h3>
                     
                     <div className="space-y-2">
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Nume:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.name')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">{formData.client_name}</span>
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Email:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.email')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">{formData.client_email}</span>
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Telefon:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.phone')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">{formData.client_phone}</span>
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Data:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.date')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">
                           {formData.interview_date && formatDate(new Date(formData.interview_date))}
                         </span>
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Ora:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.time')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">{formData.interview_time}</span>
                       </p>
                       <p className="text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Tip:</span>{' '}
+                        <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.type')}:</span>{' '}
                         <span className="text-gray-900 dark:text-gray-100">
-                          {formData.interview_type === 'online' ? 'Online' : 'În persoană'}
+                          {formData.interview_type === 'online' ? t('common.online') : t('common.inPerson')}
                         </span>
                       </p>
                       {formData.notes && (
                         <p className="text-sm">
-                          <span className="font-medium text-gray-600 dark:text-gray-400">Note:</span>{' '}
+                          <span className="font-medium text-gray-600 dark:text-gray-400">{t('common.notes')}:</span>{' '}
                           <span className="text-gray-900 dark:text-gray-100">{formData.notes}</span>
                         </p>
                       )}
@@ -665,7 +687,7 @@ export default function BookingPage() {
                       <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                       <div className="ml-3">
                         <p className="text-sm text-blue-800 dark:text-blue-200">
-                          Vei primi un email de confirmare la adresa {formData.client_email} cu detaliile programării.
+                          {t('booking.confirmationEmail').replace('{email}', formData.client_email)}
                         </p>
                       </div>
                     </div>
@@ -676,7 +698,7 @@ export default function BookingPage() {
                       onClick={handleBack}
                       className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      ← Înapoi
+                      ← {t('common.back')}
                     </button>
                     <button
                       onClick={handleSubmit}
@@ -689,12 +711,12 @@ export default function BookingPage() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          Se procesează...
+                          {t('common.processing')}...
                         </>
                       ) : (
                         <>
                           <CheckCircle className="w-5 h-5 mr-2" />
-                          Confirmă programarea
+                          {t('booking.confirmBooking')}
                         </>
                       )}
                     </button>
@@ -707,13 +729,13 @@ export default function BookingPage() {
                 <div className="text-center py-12">
                   <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                   <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    Programare confirmată!
+                    {t('booking.bookingConfirmed')}
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Ai primit un email de confirmare cu toate detaliile programării.
+                    {t('booking.confirmationSent')}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">
-                    Vei fi redirecționat în câteva secunde...
+                    {t('booking.redirecting')}
                   </p>
                 </div>
               )}

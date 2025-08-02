@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Bell, X, CheckCircle, AlertCircle, Info, XCircle, Volume2, VolumeX } from 'lucide-react';
 import { format } from 'date-fns';
 import { ro } from 'date-fns/locale';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { createPortal } from 'react-dom';
 import socketService from '@/services/socketService';
 
@@ -21,6 +22,7 @@ interface Notification {
 }
 
 export default function NotificationSystem() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -121,42 +123,29 @@ export default function NotificationSystem() {
   }, [notifications]);
 
   const showToastNotification = (notification: Notification) => {
-    const Icon = getNotificationIcon(notification.type);
+    // Formatăm mesajul pentru toast
+    const fullMessage = `${notification.title}: ${notification.message}`;
     
-    toast.custom((t) => (
-      <div
-        className={`${
-          t.visible ? 'animate-enter' : 'animate-leave'
-        } max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5`}
-      >
-        <div className="p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <Icon className={`h-6 w-6 ${getNotificationColor(notification.type)}`} />
-            </div>
-            <div className="ml-3 w-0 flex-1 pt-0.5">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {notification.title}
-              </p>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {notification.message}
-              </p>
-            </div>
-            <div className="ml-4 flex-shrink-0 flex">
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="bg-white dark:bg-gray-800 rounded-md inline-flex text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    ), {
-      duration: 5000,
-      position: 'top-right',
-    });
+    // Afișăm notificarea folosind toastService bazat pe tip
+    switch (notification.type) {
+      case 'booking_created':
+        toastService.success('success.generic', fullMessage);
+        break;
+      case 'booking_cancelled':
+        toastService.error('error.generic', fullMessage);
+        break;
+      case 'booking_updated':
+        toastService.info('info.generic', fullMessage);
+        break;
+      case 'document_uploaded':
+        toastService.success('success.generic', fullMessage);
+        break;
+      case 'user_registered':
+        toastService.info('info.generic', fullMessage);
+        break;
+      default:
+        toastService.info('info.generic', fullMessage);
+    }
   };
 
   const playNotificationSound = () => {
@@ -228,7 +217,7 @@ export default function NotificationSystem() {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
     localStorage.setItem('notificationSound', String(newValue));
-    toast.success(`Sunet notificări ${newValue ? 'activat' : 'dezactivat'}`);
+    toastService.success('success.generic', `Sunet notificări ${newValue ? 'activat' : 'dezactivat'}`);
   };
 
   // Render notifications panel using Portal

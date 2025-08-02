@@ -1,8 +1,10 @@
 'use client';
 import { useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 
 export default function SlotsPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   
   useEffect(() => {
@@ -11,7 +13,7 @@ export default function SlotsPage() {
   
   return (
     <div className="flex items-center justify-center h-64">
-      <p>Sloturile sunt generate automat...</p>
+      <p>{t('slots.sloturile_sunt_generate_automa')}</p>
     </div>
   );
 }

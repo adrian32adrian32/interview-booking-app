@@ -1,10 +1,11 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import api from '@/lib/axios';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 interface User {
   id: number;
@@ -35,6 +36,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -140,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Configurăm axios cu noul token
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        toast.success('Autentificare reușită!');
+        toastService.success('success.generic', 'Autentificare reușită!');
         
         // Redirect bazat pe rol
         if (userData.role === 'admin') {
@@ -151,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: any) {
       const message = error.response?.data?.message || 'Eroare la autentificare';
-      toast.error(message);
+      toastService.error('error.generic', message);
       throw error;
     }
   };
@@ -174,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Redirect și notificare
     router.push('/login');
-    toast.success('Ai fost deconectat cu succes!');
+    toastService.success('success.generic', 'Ai fost deconectat cu succes!');
   };
 
   return (
@@ -194,8 +196,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
+    if (typeof window === 'undefined') {
+      return {
+        user: null,
+        loading: true,
+        login: async () => ({ success: false, message: 'SSR' }),
+        logout: () => {},
+        checkAuth: async () => {},
+        refreshUser: async () => {}
+      };
+    }
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  
   return context;
 };

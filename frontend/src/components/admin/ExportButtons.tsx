@@ -1,7 +1,9 @@
 'use client';
 
 import { Download } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import axios from '@/lib/axios';
+import { toastService } from '@/services/toastService';
 
 interface ExportButtonsProps {
   type: 'bookings' | 'users';
@@ -9,6 +11,8 @@ interface ExportButtonsProps {
 }
 
 export default function ExportButtons({ type, filters }: ExportButtonsProps) {
+  const { t } = useLanguage();
+  
   const handleExportExcel = async () => {
     try {
       const response = await axios.get(`/export/${type}/excel`, {
@@ -26,8 +30,11 @@ export default function ExportButtons({ type, filters }: ExportButtonsProps) {
       link.download = `${type}_${new Date().toISOString().split('T')[0]}.xlsx`;
       link.click();
       window.URL.revokeObjectURL(url);
+      
+      toastService.success('success.generic', t('common.exportSuccess'));
     } catch (error) {
       console.error('Export error:', error);
+      toastService.error('error.generic', t('common.exportError'));
     }
   };
 
@@ -45,8 +52,11 @@ export default function ExportButtons({ type, filters }: ExportButtonsProps) {
       link.download = `${type}_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       window.URL.revokeObjectURL(url);
+      
+      toastService.success('success.generic', t('common.exportSuccess'));
     } catch (error) {
       console.error('Export error:', error);
+      toastService.error('error.generic', t('common.exportError'));
     }
   };
 
@@ -55,17 +65,19 @@ export default function ExportButtons({ type, filters }: ExportButtonsProps) {
       <button
         onClick={handleExportExcel}
         className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        title={t('common.exportExcel')}
       >
         <Download className="h-4 w-4" />
-        Export Excel
+        {t('common.exportExcel') || 'Export Excel'}
       </button>
       
       <button
         onClick={handleExportCSV}
         className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        title={t('common.exportCSV')}
       >
         <Download className="h-4 w-4" />
-        Export CSV
+        {t('common.exportCSV') || 'Export CSV'}
       </button>
     </div>
   );

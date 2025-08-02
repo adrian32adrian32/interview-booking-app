@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { User, Mail, Phone, Calendar, Edit, Trash2, Power, PowerOff, FileText, Briefcase } from 'lucide-react';
 
 interface UserData {
@@ -21,6 +22,7 @@ interface UserData {
 }
 
 export default function UsersList() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function UsersList() {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast.error('Eroare la încărcarea utilizatorilor');
+      toastService.error('error.loadingUsers');
     } finally {
       setLoading(false);
     }
@@ -48,10 +50,10 @@ export default function UsersList() {
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await axios.patch(`/users/${userId}/status`, { status: newStatus });
-      toast.success(`Utilizator ${newStatus === 'active' ? 'activat' : 'dezactivat'}`);
+      toastService.success('success.generic', `Utilizator ${newStatus === 'active' ? 'activat' : 'dezactivat'}`);
       fetchUsers();
     } catch (error) {
-      toast.error('Eroare la actualizarea statusului');
+      toastService.error('error.updateStatus');
     }
   };
 
@@ -62,13 +64,13 @@ export default function UsersList() {
 
     try {
       await axios.delete(`/users/${userId}`);
-      toast.success('Utilizator șters cu succes');
+      toastService.success('success.generic', 'Utilizator șters cu succes');
       fetchUsers();
     } catch (error: any) {
       if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
+        toastService.error('error.generic', error.response.data.message);
       } else {
-        toast.error('Eroare la ștergerea utilizatorului');
+        toastService.error('error.deleteUser');
       }
     }
   };
@@ -100,10 +102,10 @@ export default function UsersList() {
               className="rounded-md border-gray-300"
             >
               <option value="all">Toți</option>
-              <option value="active">Activi</option>
-              <option value="inactive">Inactivi</option>
-              <option value="admin">Admini</option>
-              <option value="user">Utilizatori</option>
+              <option value="active">{t('components.activi')}</option>
+              <option value="inactive">{t('components.inactivi')}</option>
+              <option value="admin">{t('components.admini')}</option>
+              <option value="user">{t('components.utilizatori')}</option>
             </select>
           </div>
         </div>
@@ -209,7 +211,7 @@ export default function UsersList() {
                     <button
                       onClick={() => router.push(`/admin/users/${user.id}/documents`)}
                       className="text-green-600 hover:text-green-900"
-                      title="Documente"
+                      title={t('components.documente')}
                     >
                       <FileText className="h-4 w-4" />
                     </button>

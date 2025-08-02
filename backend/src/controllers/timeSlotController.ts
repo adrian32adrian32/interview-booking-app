@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../config/database';
+const { pool } = require('../config/database');
 
 // Definește sloturile de timp disponibile
 const TIME_SLOTS = [

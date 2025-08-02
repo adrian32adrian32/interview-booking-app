@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { Calendar, Clock, Plus, XCircle, MapPin, User, Phone, Mail } from 'lucide-react';
 
@@ -18,6 +19,7 @@ interface Booking {
 }
 
 export default function BookingsPage() {
+  const { t, language } = useLanguage();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function BookingsPage() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setError('Nu ești autentificat');
+        setError(t('errors.notAuthenticated'));
         setLoading(false);
         return;
       }
@@ -44,7 +46,7 @@ export default function BookingsPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          setError('Sesiunea a expirat. Te rog să te autentifici din nou.');
+          setError(t('errors.sessionExpired'));
           localStorage.removeItem('token');
           window.location.href = '/login';
           return;
@@ -58,25 +60,25 @@ export default function BookingsPage() {
       if (data.success) {
         setBookings(data.bookings || []);
       } else {
-        setError(data.message || 'Eroare la încărcarea programărilor');
+        setError(data.message || t('errors.loadingBookings'));
       }
     } catch (error) {
       console.error('Error loading bookings:', error);
-      setError('Eroare la încărcarea programărilor. Te rog încearcă din nou.');
+      setError(t('errors.loadingBookingsTryAgain'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = async (bookingId: number) => {
-    if (!confirm('Ești sigur că vrei să anulezi această programare?')) {
+    if (!confirm(t('bookings.cancelConfirm'))) {
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setError('Nu ești autentificat');
+        setError(t('errors.notAuthenticated'));
         return;
       }
 
@@ -103,14 +105,14 @@ export default function BookingsPage() {
         // Afișează mesaj de succes
         const successDiv = document.createElement('div');
         successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-        successDiv.textContent = 'Programare anulată cu succes!';
+        successDiv.textContent = t('bookings.bookingCancelledSuccess');
         document.body.appendChild(successDiv);
         
         setTimeout(() => {
           successDiv.remove();
         }, 3000);
       } else {
-        throw new Error(data.message || 'Eroare la anularea programării');
+        throw new Error(data.message || t('errors.cancellingBooking'));
       }
     } catch (error) {
       console.error('Error canceling booking:', error);
@@ -118,7 +120,7 @@ export default function BookingsPage() {
       // Afișează mesaj de eroare
       const errorDiv = document.createElement('div');
       errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-      errorDiv.textContent = error instanceof Error ? error.message : 'Eroare la anularea programării';
+      errorDiv.textContent = error instanceof Error ? error.message : t('errors.cancellingBooking');
       document.body.appendChild(errorDiv);
       
       setTimeout(() => {
@@ -139,7 +141,18 @@ export default function BookingsPage() {
         month: "long",
         day: "numeric",
       };
-      return date.toLocaleDateString("ro-RO", options);
+      
+      // Folosește limba curentă pentru formatare
+      const locale = language === 'ro' ? 'ro-RO' : 
+                     language === 'en' ? 'en-US' : 
+                     language === 'it' ? 'it-IT' :
+                     language === 'fr' ? 'fr-FR' :
+                     language === 'de' ? 'de-DE' :
+                     language === 'es' ? 'es-ES' :
+                     language === 'ru' ? 'ru-RU' :
+                     language === 'uk' ? 'uk-UA' : 'en-US';
+                     
+      return date.toLocaleDateString(locale, options);
     } catch {
       return dateStr;
     }
@@ -148,7 +161,15 @@ export default function BookingsPage() {
   const formatShortDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr + 'T00:00:00');
-      return date.toLocaleDateString('ro-RO');
+      const locale = language === 'ro' ? 'ro-RO' : 
+                     language === 'en' ? 'en-US' : 
+                     language === 'it' ? 'it-IT' :
+                     language === 'fr' ? 'fr-FR' :
+                     language === 'de' ? 'de-DE' :
+                     language === 'es' ? 'es-ES' :
+                     language === 'ru' ? 'ru-RU' :
+                     language === 'uk' ? 'uk-UA' : 'en-US';
+      return date.toLocaleDateString(locale);
     } catch {
       return dateStr;
     }
@@ -191,31 +212,31 @@ export default function BookingsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Programările mele
+          {t('bookings.myBookings')}
         </h1>
         <Link
           href="/booking"
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Programare nouă
+          {t('bookings.newBooking')}
         </Link>
       </div>
 
       {/* Programări viitoare */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Programări viitoare
+          {t('bookings.upcomingBookings')}
         </h2>
         {upcomingBookings.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
             <Calendar className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-            <p className="mb-2">Nu ai programări viitoare.</p>
+            <p className="mb-2">{t('bookings.noUpcomingBookings')}</p>
             <Link
               href="/booking"
               className="inline-block mt-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
             >
-              Programează acum →
+              {t('bookings.scheduleNow')} →
             </Link>
           </div>
         ) : (
@@ -246,9 +267,9 @@ export default function BookingsPage() {
                           booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' : 
                           booking.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
                           'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
-                        {booking.status === 'confirmed' ? 'Confirmat' : 
-                         booking.status === 'pending' ? 'În așteptare' : 
-                         booking.status === 'cancelled' ? 'Anulat' : booking.status}
+                        {booking.status === 'confirmed' ? t('bookings.confirmed') : 
+                         booking.status === 'pending' ? t('common.pending') : 
+                         booking.status === 'cancelled' ? t('bookings.cancelled') : booking.status}
                       </span>
                     </div>
                     
@@ -264,7 +285,7 @@ export default function BookingsPage() {
                       <div className="flex items-center text-gray-700 dark:text-gray-300">
                         <MapPin className="h-5 w-5 mr-2 text-blue-500" />
                         <span className="text-sm font-medium">
-                          {booking.interview_type === 'online' ? 'Online' : 'În persoană'}
+                          {booking.interview_type === 'online' ? t('common.online') : t('common.inPerson')}
                         </span>
                       </div>
                     </div>
@@ -272,7 +293,7 @@ export default function BookingsPage() {
                     {booking.notes && (
                       <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         <p className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">Note:</span> {booking.notes}
+                          <span className="font-medium">{t('common.notes')}:</span> {booking.notes}
                         </p>
                       </div>
                     )}
@@ -282,10 +303,10 @@ export default function BookingsPage() {
                     <button
                       onClick={() => handleCancel(booking.id)}
                       className="ml-4 flex items-center px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Anulează programarea"
+                      title={t('bookings.cancelBooking')}
                     >
                       <XCircle className="h-5 w-5 mr-1" />
-                      <span className="hidden sm:inline">Anulează</span>
+                      <span className="hidden sm:inline">{t('common.cancel')}</span>
                     </button>
                   )}
                 </div>
@@ -299,7 +320,7 @@ export default function BookingsPage() {
       {pastBookings.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Istoric programări
+            {t('bookings.bookingHistory')}
           </h2>
           <div className="space-y-3">
             {pastBookings.map((booking) => (
@@ -314,8 +335,8 @@ export default function BookingsPage() {
                         ${booking.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 
                           booking.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
                           'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-300'}`}>
-                        {booking.status === 'completed' ? 'Finalizat' : 
-                         booking.status === 'cancelled' ? 'Anulat' : booking.status}
+                        {booking.status === 'completed' ? t('bookings.finalized') : 
+                         booking.status === 'cancelled' ? t('bookings.cancelled') : booking.status}
                       </span>
                     </div>
                     <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -329,7 +350,7 @@ export default function BookingsPage() {
                       </span>
                       <span className="flex items-center">
                         <MapPin className="h-4 w-4 mr-1" />
-                        {booking.interview_type === 'online' ? 'Online' : 'În persoană'}
+                        {booking.interview_type === 'online' ? t('common.online') : t('common.inPerson')}
                       </span>
                     </div>
                   </div>

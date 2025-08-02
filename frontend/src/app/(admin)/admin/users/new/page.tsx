@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, User, Mail, Phone, Shield, Key } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 export default function NewUserPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState('light');
@@ -93,13 +95,13 @@ export default function NewUserPage() {
 
     // Validare parolă
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Parolele nu coincid');
+      toastService.error('error.passwordMismatch');
       return;
     }
 
     // Validare lungime parolă
     if (formData.password.length < 6) {
-      toast.error('Parola trebuie să aibă minim 6 caractere');
+      toastService.error('error.generic', 'Parola trebuie să aibă minim 6 caractere');
       return;
     }
 
@@ -131,11 +133,11 @@ export default function NewUserPage() {
         throw new Error(data.message || 'Failed to create user');
       }
 
-      toast.success('Utilizator creat cu succes!');
+      toastService.success('success.generic', 'Utilizator creat cu succes!');
       router.push('/admin/users');
     } catch (error: any) {
       console.error('Error:', error);
-      toast.error(error.message || 'Eroare la crearea utilizatorului');
+      toastService.error('error.generic', error.message || 'Eroare la crearea utilizatorului');
     } finally {
       setLoading(false);
     }
@@ -265,9 +267,9 @@ export default function NewUserPage() {
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               className={getSelectClasses()}
             >
-              <option value="user">Utilizator</option>
-              <option value="admin">Administrator</option>
-              <option value="moderator">Moderator</option>
+              <option value="user">{t('new.utilizator')}</option>
+              <option value="admin">{t('new.administrator')}</option>
+              <option value="moderator">{t('new.moderator')}</option>
             </select>
           </div>
 

@@ -20,6 +20,7 @@ import {
   Filler
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // IMPORTANT: Înregistrează toate componentele Chart.js
 ChartJS.register(
@@ -36,6 +37,7 @@ ChartJS.register(
 );
 
 export default function DashboardStats() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const { theme } = useTheme();
   const chartColors = getChartColors(theme);
@@ -153,14 +155,15 @@ export default function DashboardStats() {
   const weeklyChartData = {
     labels: stats.weeklyEvolution.map((item: any) => {
       const date = new Date(item.week);
-      return date.toLocaleDateString('ro-RO', { 
+      // Folosim formatul potrivit pentru limba curentă
+      return date.toLocaleDateString(language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : language + '-' + language.toUpperCase(), { 
         day: 'numeric', 
         month: 'short' 
       });
     }),
     datasets: [
       {
-        label: 'Total Programări',
+        label: t('dashboard.totalScheduled'),
         data: stats.weeklyEvolution.map((item: any) => parseInt(item.count) || 0),
         borderColor: chartColors.primary || '#3B82F6',
         backgroundColor: chartColors.primary ? `${chartColors.primary}20` : 'rgba(59, 130, 246, 0.1)',
@@ -170,7 +173,7 @@ export default function DashboardStats() {
         pointHoverRadius: 6
       },
       {
-        label: 'Completate',
+        label: t('dashboard.completed'),
         data: stats.weeklyEvolution.map((item: any) => parseInt(item.completed) || 0),
         borderColor: chartColors.success || '#10B981',
         backgroundColor: chartColors.success ? `${chartColors.success}20` : 'rgba(16, 185, 129, 0.1)',
@@ -184,7 +187,7 @@ export default function DashboardStats() {
 
   // Chart data with dynamic colors
   const statusChartData = {
-    labels: ['În așteptare', 'Confirmate', 'Finalizate', 'Anulate'],
+    labels: [t('dashboard.pending'), t('dashboard.confirmed'), t('dashboard.completed'), t('dashboard.cancelled')],
     datasets: [{
       data: [
         stats.bookingsByStatus.pending,
@@ -253,7 +256,7 @@ export default function DashboardStats() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">Total utilizatori</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">{t('dashboard.totalUsers')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{stats.totalUsers}</p>
             </div>
             <div className="p-3 bg-blue-100 dark:bg-blue-900/30 futuristic:bg-cyan-500/20 rounded-full">
@@ -264,18 +267,18 @@ export default function DashboardStats() {
             onClick={() => router.push('/admin/users')}
             className="mt-4 text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 text-sm flex items-center hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
           >
-            Vezi detalii <ChevronRight className="h-4 w-4 ml-1" />
+            {t('dashboard.viewDetails')} <ChevronRight className="h-4 w-4 ml-1" />
           </button>
         </div>
 
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">Total programări</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">{t('dashboard.totalBookings')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{stats.totalBookings}</p>
               <div className="mt-1 flex gap-2 text-xs">
-                <span className="text-green-600 dark:text-green-400 futuristic:text-green-400">● {stats.bookingsByStatus.confirmed} finalizate</span>
-                <span className="text-yellow-600 dark:text-yellow-400 futuristic:text-yellow-400">● {stats.bookingsByStatus.pending} anulate</span>
+                <span className="text-green-600 dark:text-green-400 futuristic:text-green-400">● {stats.bookingsByStatus.confirmed} {t('dashboard.finalized')}</span>
+                <span className="text-yellow-600 dark:text-yellow-400 futuristic:text-yellow-400">● {stats.bookingsByStatus.pending} {t('dashboard.cancelled')}</span>
               </div>
             </div>
             <div className="p-3 bg-green-100 dark:bg-green-900/30 futuristic:bg-green-500/20 rounded-full">
@@ -287,10 +290,12 @@ export default function DashboardStats() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">Interviuri astăzi</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">{t('dashboard.interviewsToday')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{stats.todayInterviews}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 mt-1">
-                {stats.todayInterviews > 0 ? `${18 - stats.todayInterviews} sloturi libere` : '18 sloturi libere'}
+                {stats.todayInterviews > 0 
+                  ? `${18 - stats.todayInterviews} ${t('dashboard.freeSlots')}` 
+                  : `18 ${t('dashboard.freeSlots')}`}
               </p>
             </div>
             <div className="p-3 bg-purple-100 dark:bg-purple-900/30 futuristic:bg-purple-500/20 rounded-full">
@@ -302,7 +307,7 @@ export default function DashboardStats() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">Rata de conversie</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70">{t('dashboard.conversionRate')}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{stats.conversionRate}%</p>
             </div>
             <div className="p-3 bg-orange-100 dark:bg-orange-900/30 futuristic:bg-orange-500/20 rounded-full">
@@ -313,7 +318,7 @@ export default function DashboardStats() {
             onClick={() => router.push('/admin/statistics')}
             className="mt-4 text-orange-600 dark:text-orange-400 futuristic:text-orange-400 text-sm flex items-center hover:text-orange-800 dark:hover:text-orange-300 futuristic:hover:text-orange-300"
           >
-            Vezi statistici <ChevronRight className="h-4 w-4 ml-1" />
+            {t('dashboard.viewStatistics')} <ChevronRight className="h-4 w-4 ml-1" />
           </button>
         </div>
       </div>
@@ -323,7 +328,7 @@ export default function DashboardStats() {
         {/* Evolution Chart */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Evoluție săptămânală</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.weeklyEvolution')}</h3>
             <div className="flex gap-2">
               <button
                 onClick={() => setTimeFilter('week')}
@@ -333,7 +338,7 @@ export default function DashboardStats() {
                     : 'text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70 hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-purple-800/30'
                 }`}
               >
-                Săptămână
+                {t('common.week')}
               </button>
               <button
                 onClick={() => setTimeFilter('month')}
@@ -343,7 +348,7 @@ export default function DashboardStats() {
                     : 'text-gray-600 dark:text-gray-400 futuristic:text-cyan-200/70 hover:bg-gray-100 dark:hover:bg-gray-700 futuristic:hover:bg-purple-800/30'
                 }`}
               >
-                Lună
+                {t('common.month')}
               </button>
             </div>
           </div>
@@ -355,7 +360,7 @@ export default function DashboardStats() {
               />
             ) : (
               <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50">
-                <p>Nu există date suficiente pentru grafic</p>
+                <p>{t('dashboard.noDataForChart')}</p>
               </div>
             )}
           </div>
@@ -363,7 +368,7 @@ export default function DashboardStats() {
 
         {/* Status Distribution */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Distribuție status</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.statusDistribution')}</h3>
           <div className="h-64">
             <Doughnut 
               data={statusChartData}
@@ -400,7 +405,7 @@ export default function DashboardStats() {
             onClick={() => router.push('/admin/bookings')}
             className="mt-4 text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 text-sm flex items-center hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300 mx-auto"
           >
-            Vezi toate programările
+            {t('dashboard.viewAllBookings')}
           </button>
         </div>
       </div>
@@ -410,7 +415,7 @@ export default function DashboardStats() {
         {/* Recent Bookings */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Programări recente</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.recentBookings')}</h3>
           </div>
           <div className="p-6">
             {stats.recentBookings.length > 0 ? (
@@ -420,7 +425,9 @@ export default function DashboardStats() {
                     <div>
                       <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{booking.client_name}</p>
                       <p className="text-sm text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50">
-                        {new Date(booking.interview_date).toLocaleDateString('ro-RO')} la {booking.interview_time}
+                        {new Date(booking.interview_date).toLocaleDateString(
+                          language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : language + '-' + language.toUpperCase()
+                        )} {t('common.at')} {booking.interview_time}
                       </p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs ${
@@ -429,28 +436,29 @@ export default function DashboardStats() {
                       booking.status === 'completed' ? 'bg-blue-100 dark:bg-blue-900/30 futuristic:bg-blue-500/20 text-blue-800 dark:text-blue-400 futuristic:text-blue-400' :
                       'bg-red-100 dark:bg-red-900/30 futuristic:bg-red-500/20 text-red-800 dark:text-red-400 futuristic:text-red-400'
                     }`}>
-                      {booking.status === 'confirmed' ? 'Confirmat' :
-                       booking.status === 'pending' ? 'În așteptare' :
-                       booking.status === 'completed' ? 'Finalizat' : 'Anulat'}
+                      {booking.status === 'confirmed' ? t('dashboard.confirmed') :
+                       booking.status === 'pending' ? t('dashboard.pending') :
+                       booking.status === 'completed' ? t('dashboard.finalized') : 
+                       t('dashboard.cancelled')}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 text-center py-8">Nu există programări recente</p>
+              <p className="text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 text-center py-8">{t('dashboard.noRecentBookings')}</p>
             )}
             <button
               onClick={() => router.push('/admin/bookings')}
               className="mt-4 text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 text-sm hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
             >
-              Vezi toate →
+              {t('common.viewAll')} →
             </button>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 p-6 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Acțiuni rapide</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.quickActions')}</h3>
           <div className="space-y-3">
             <button
               onClick={() => router.push('/admin/bookings/new')}
@@ -458,8 +466,8 @@ export default function DashboardStats() {
             >
               <CalendarPlus className="h-5 w-5 text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 mr-3" />
               <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Programare nouă</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">Creează o programare pentru un client</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.newBooking')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">{t('dashboard.createBookingForClient')}</p>
               </div>
             </button>
             
@@ -469,8 +477,8 @@ export default function DashboardStats() {
             >
               <UserPlus className="h-5 w-5 text-green-600 dark:text-green-400 futuristic:text-green-400 mr-3" />
               <div className="text-left">
-                <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Utilizator nou</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">Adaugă un utilizator în sistem</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('dashboard.addUser')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">{t('dashboard.addUserDesc')}</p>
               </div>
             </button>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Calendar, Clock, User, Mail, Phone, Video, MapPin, FileText } from 'lucide-react';
 import api from '@/lib/axios';
 
@@ -18,6 +19,7 @@ interface BookingFormData {
 }
 
 const BookingForm: React.FC = () => {
+  const { t } = useLanguage(); // Mutat aici la începutul componentei
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -174,7 +176,7 @@ const BookingForm: React.FC = () => {
               }`}>
                 <Calendar className="w-5 h-5" />
               </div>
-              <span className="ml-3 font-medium">Alege data</span>
+              <span className="ml-3 font-medium">{t('booking.alege_data')}</span>
             </div>
             
             <div className={`flex-1 h-0.5 mx-4 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`} />
@@ -185,7 +187,7 @@ const BookingForm: React.FC = () => {
               }`}>
                 <Clock className="w-5 h-5" />
               </div>
-              <span className="ml-3 font-medium">Alege ora</span>
+              <span className="ml-3 font-medium">{t('booking.alege_ora')}</span>
             </div>
             
             <div className={`flex-1 h-0.5 mx-4 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`} />
@@ -196,7 +198,7 @@ const BookingForm: React.FC = () => {
               }`}>
                 <User className="w-5 h-5" />
               </div>
-              <span className="ml-3 font-medium">Date personale</span>
+              <span className="ml-3 font-medium">{t('booking.date_personale')}</span>
             </div>
           </div>
         </div>
@@ -369,7 +371,7 @@ const BookingForm: React.FC = () => {
                         className="sr-only"
                       />
                       <Video className="w-5 h-5 mr-2" />
-                      <span className="font-medium">Online</span>
+                      <span className="font-medium">{t('booking.online')}</span>
                     </label>
                     
                     <label className={`relative flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-all ${

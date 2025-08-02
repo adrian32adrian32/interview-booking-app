@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Upload, X, File, CheckCircle, AlertCircle } from 'lucide-react';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 interface FileUploadProps {
   type: 'buletin' | 'selfie' | 'cv' | 'other';
@@ -28,7 +29,7 @@ export default function FileUpload({
 
     // Validare dimensiune
     if (file.size > maxSize) {
-      toast.error(`Fișierul nu poate depăși ${maxSize / (1024 * 1024)}MB`);
+      toastService.error('error.generic', `Fișierul nu poate depăși ${maxSize / (1024 * 1024)}MB`);
       return;
     }
 
@@ -54,7 +55,7 @@ export default function FileUpload({
       });
 
       if (response.data.success) {
-        toast.success('Document încărcat cu succes!');
+        toastService.success('success.generic', 'Document încărcat cu succes!');
         onUploadSuccess?.();
         
         // Reset input
@@ -67,7 +68,7 @@ export default function FileUpload({
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           'Eroare la încărcarea documentului';
-      toast.error(errorMessage);
+      toastService.error('error.generic', errorMessage);
     } finally {
       setUploading(false);
       setUploadProgress(0);

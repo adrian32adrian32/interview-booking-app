@@ -1,19 +1,18 @@
 'use client';
 
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/providers/ThemeProvider';
-import { ReactNode } from 'react';
+// @ts-ignore
+import { LanguageProvider } from '@/contexts/LanguageContext';
 
-interface ProvidersProps {
-  children: ReactNode;
-}
-
-export function Providers({ children }: ProvidersProps) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

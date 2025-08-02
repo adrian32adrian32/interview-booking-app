@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Slot {
   id: string;
@@ -21,6 +22,7 @@ interface ExistingBooking {
 }
 
 export default function BookingCalendar() {
+  const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState('');
   const [displayMonth, setDisplayMonth] = useState(new Date());
   const [slots, setSlots] = useState<Slot[]>([]);

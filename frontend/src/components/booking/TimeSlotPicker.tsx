@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Calendar, Clock, AlertCircle, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from '@/lib/axios';
 import { format, addDays, isSameDay, isWeekend, startOfToday, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isAfter, isBefore } from 'date-fns';

@@ -1,9 +1,10 @@
 import axios from 'axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 // Pentru development local, folosește localhost:5000
 // Pentru production, folosește IP-ul serverului fără port (Nginx face proxy pe portul 80)
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://94.156.250.138/api';
+export const BASE_URL = 'http://94.156.250.138';
 
 console.log('🔧 API URL configured:', API_URL);
 
@@ -63,37 +64,41 @@ axiosInstance.interceptors.response.use(
             // Redirecționăm doar dacă nu suntem deja pe pagina de login
             if (window.location.pathname !== '/login' && 
                 window.location.pathname !== '/register') {
-              toast.error('Sesiune expirată. Te rugăm să te autentifici din nou.');
+              toastService.error('error.unauthorized');
               window.location.href = '/login';
             }
           }
           break;
           
         case 403:
-          toast.error('Nu ai permisiunea să accesezi această resursă.');
+          toastService.error('error.forbidden');
           break;
           
         case 404:
-          toast.error('Resursa solicitată nu a fost găsită.');
+          toastService.error('error.notFound');
           break;
           
         case 500:
-          toast.error('Eroare server. Te rugăm să încerci din nou.');
+          toastService.error('error.server');
           break;
           
         default:
           // Pentru alte erori, afișăm mesajul de la server dacă există
-          const message = error.response.data?.message || 'A apărut o eroare. Te rugăm să încerci din nou.';
-          toast.error(message);
+          const message = error.response.data?.message;
+          if (message) {
+            toastService.error('error.generic', message);
+          } else {
+            toastService.error('error.generic');
+          }
       }
     } else if (error.request) {
       // Request-ul a fost făcut dar nu s-a primit răspuns
       console.error('❌ No response received:', error.request);
-      toast.error('Nu s-a putut conecta la server. Verifică conexiunea la internet.');
+      toastService.error('error.network');
     } else {
       // Altă eroare
       console.error('❌ Error:', error.message);
-      toast.error('A apărut o eroare neașteptată.');
+      toastService.error('error.generic');
     }
     
     return Promise.reject(error);

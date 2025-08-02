@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -17,22 +18,23 @@ import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import dynamic from 'next/dynamic';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Programările mele', href: '/bookings', icon: Calendar },
-  { name: 'Profil', href: '/profile', icon: User },
-  { name: 'Documentele mele', href: '/documents', icon: FileText },
-];
-
 function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useLanguage();
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const navigation = [
+    { name: t('nav.dashboard'), href: '/dashboard', icon: Home },
+    { name: t('nav.bookings'), href: '/bookings', icon: Calendar },
+    { name: t('nav.profile'), href: '/profile', icon: User },
+    { name: t('nav.documents'), href: '/documents', icon: FileText },
+  ];
 
   useEffect(() => {
     setMounted(true);
@@ -147,7 +149,7 @@ function DashboardLayoutContent({
             {user && (
               <div className="mb-4">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 futuristic:text-foreground">{user.name || user.email}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground">{user.role === 'admin' ? 'Administrator' : 'Utilizator'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-muted-foreground">{user.role === 'admin' ? t('user.role.admin') : t('user.role.user')}</p>
               </div>
             )}
             <button

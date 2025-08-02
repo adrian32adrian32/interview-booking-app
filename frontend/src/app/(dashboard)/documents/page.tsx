@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { FileText, Upload, Download, Trash2, Eye, X } from 'lucide-react';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 
 interface Document {
   id: number;
@@ -19,6 +20,7 @@ interface Document {
 }
 
 export default function DocumentsPage() {
+  const { t, language } = useLanguage();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploadOptions, setShowUploadOptions] = useState(false);
@@ -34,7 +36,7 @@ export default function DocumentsPage() {
       setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Error fetching documents:', error);
-      toast.error('Eroare la încărcarea documentelor');
+      toastService.error('error.loading', t('documents.errors.loading'));
     } finally {
       setLoading(false);
     }
@@ -55,21 +57,21 @@ export default function DocumentsPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      toast.success('Document descărcat cu succes');
+      toastService.success('success.generic', t('documents.success.downloaded'));
     } catch (error) {
-      toast.error('Eroare la descărcarea documentului');
+      toastService.error('error.downloading', t('documents.errors.downloading'));
     }
   };
 
   const handleDelete = async (docId: number) => {
-    if (!confirm('Sigur doriți să ștergeți acest document?')) return;
+    if (!confirm(t('documents.deleteConfirm'))) return;
     
     try {
       await axios.delete(`/upload/document/${docId}`);
-      toast.success('Document șters');
+      toastService.success('success.generic', t('documents.success.deleted'));
       fetchDocuments();
     } catch (error) {
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.deleting', t('documents.errors.deleting'));
     }
   };
 
@@ -89,7 +91,7 @@ export default function DocumentsPage() {
       });
 
       if (response.data.success) {
-        toast.success('Document încărcat cu succes');
+        toastService.success('success.generic', t('documents.success.uploaded'));
         fetchDocuments();
         setShowUploadOptions(false);
         // Reset input
@@ -98,8 +100,8 @@ export default function DocumentsPage() {
     } catch (error: any) {
       console.error('Upload error:', error);
       // Afișează mesajul de eroare specific de la server
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Eroare la încărcarea documentului';
-      toast.error(errorMessage);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || t('documents.errors.uploading');
+      toastService.error('error.uploading', errorMessage);
     }
   };
 
@@ -119,14 +121,14 @@ export default function DocumentsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Documentele mele
+          {t('documents.title')}
         </h1>
         <button
           onClick={() => setShowUploadOptions(!showUploadOptions)}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Upload className="h-5 w-5 mr-2" />
-          Încarcă documente
+          {t('documents.uploadDocuments')}
         </button>
       </div>
 
@@ -134,8 +136,8 @@ export default function DocumentsPage() {
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
             <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">Carte de Identitate</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">JPG, PNG sau PDF</p>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-1">{t('documents.identityCard')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('documents.identityCardDesc')}</p>
             <input
               type="file"
               className="hidden"
@@ -147,14 +149,14 @@ export default function DocumentsPage() {
               htmlFor="identity-upload"
               className="mt-3 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
             >
-              Încarcă
+              {t('documents.upload')}
             </label>
           </div>
 
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
             <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">CV</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">PDF sau Word</p>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-1">{t('documents.cv')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('documents.cvDesc')}</p>
             <input
               type="file"
               className="hidden"
@@ -166,14 +168,14 @@ export default function DocumentsPage() {
               htmlFor="cv-upload"
               className="mt-3 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
             >
-              Încarcă
+              {t('documents.upload')}
             </label>
           </div>
 
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
             <FileText className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">Alte Documente</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Orice format</p>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-1">{t('documents.otherDocuments')}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('documents.otherDocumentsDesc')}</p>
             <input
               type="file"
               className="hidden"
@@ -184,7 +186,7 @@ export default function DocumentsPage() {
               htmlFor="other-upload"
               className="mt-3 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
             >
-              Încarcă
+              {t('documents.upload')}
             </label>
           </div>
         </div>
@@ -193,12 +195,12 @@ export default function DocumentsPage() {
       {documents.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
           <FileText className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-          <p>Nu ai documente încărcate.</p>
+          <p>{t('documents.noDocuments')}</p>
           <button
             onClick={() => setShowUploadOptions(true)}
             className="inline-block mt-4 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
           >
-            Încarcă documente →
+            {t('documents.uploadDocumentsPrompt')}
           </button>
         </div>
       ) : (
@@ -206,17 +208,17 @@ export default function DocumentsPage() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Document</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sursă</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Dimensiune</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acțiuni</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('documents.documentName')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('documents.source')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('documents.date')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('documents.size')}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{t('documents.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {documents.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-          <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 text-gray-400 mr-3 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
@@ -233,7 +235,9 @@ export default function DocumentsPage() {
                     {doc.source}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')}
+                    {new Date(doc.uploaded_at).toLocaleDateString(
+                      language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : `${language}-${language.toUpperCase()}`
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {doc.size ? `${(doc.size / 1024 / 1024).toFixed(2)} MB` : '-'}
@@ -244,7 +248,7 @@ export default function DocumentsPage() {
                         <button
                           onClick={() => setPreviewDoc(doc)}
                           className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                          title="Previzualizare"
+                          title={t('documents.preview')}
                         >
                           <Eye className="h-5 w-5" />
                         </button>
@@ -252,14 +256,14 @@ export default function DocumentsPage() {
                       <button
                         onClick={() => handleDownload(doc)}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                        title="Descarcă"
+                        title={t('documents.download')}
                       >
                         <Download className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(doc.id)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                        title="Șterge"
+                        title={t('documents.delete')}
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -290,19 +294,19 @@ export default function DocumentsPage() {
             <div className="p-4 overflow-auto max-h-[calc(90vh-120px)]">
               {previewDoc.mime_type.startsWith('image/') ? (
                 <img
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
                   alt={previewDoc.original_name}
                   className="max-w-full h-auto mx-auto"
                 />
               ) : previewDoc.mime_type === 'application/pdf' ? (
                 <iframe
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
                   className="w-full h-[70vh]"
                   title={previewDoc.original_name}
                 />
               ) : (
                 <p className="text-center text-gray-500 dark:text-gray-400">
-                  Acest tip de fișier nu poate fi previzualizat
+                  {t('documents.fileTypeNotPreviewable')}
                 </p>
               )}
             </div>

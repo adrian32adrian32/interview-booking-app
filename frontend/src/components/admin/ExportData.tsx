@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { Download, FileSpreadsheet, FileJson, Calendar, Users, Loader2 } from 'lucide-react';
 
 interface ExportDataProps {
@@ -55,10 +56,10 @@ export default function ExportData({ className = '' }: ExportDataProps) {
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
       
-      toast.success(`Export ${type} ${format.toUpperCase()} realizat cu succes!`);
+      toastService.success('success.generic', `Export ${type} ${format.toUpperCase()} realizat cu succes!`);
     } catch (error: any) {
       console.error('Export error:', error);
-      toast.error(error.response?.data?.message || 'Eroare la export');
+      toastService.error('error.generic', error.response?.data?.message || 'Eroare la export');
     } finally {
       setExporting(null);
     }

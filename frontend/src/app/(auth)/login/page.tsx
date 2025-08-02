@@ -1,29 +1,32 @@
 'use client';
 
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import api from '@/lib/axios';
 import Cookies from 'js-cookie';
 
-const loginSchema = z.object({
-  email: z.string().email('Email invalid'),
-  password: z.string().min(1, 'Parola este obligatorie'),
-  rememberMe: z.boolean().optional(),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
 export default function LoginPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loginMessage, setLoginMessage] = useState<{type: 'error' | 'success', message: string | React.ReactNode} | null>(null);
+
+  // Schema de validare cu traduceri
+  const loginSchema = z.object({
+    email: z.string().email(t('auth.login.errors.emailInvalid')),
+    password: z.string().min(1, t('auth.login.errors.passwordRequired')),
+    rememberMe: z.boolean().optional(),
+  });
+
+  type LoginFormData = z.infer<typeof loginSchema>;
 
   const {
     register,
@@ -59,7 +62,7 @@ export default function LoginPage() {
         // Setăm header-ul pentru axios
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        toast.success('Autentificare reușită!');
+        toastService.success('success.generic', t('success.generic'));
         
         // Redirect bazat pe rol
         setTimeout(() => {
@@ -89,7 +92,7 @@ export default function LoginPage() {
       
       setLoginMessage({
         type: 'success',
-        message: 'Autentificare reușită! Te redirecționăm...'
+        message: t('auth.login.success')
       });
       
     } catch (error: any) {
@@ -97,7 +100,7 @@ export default function LoginPage() {
       
       const errorMessage = error.response?.data?.message || 
                           error.message || 
-                          'Eroare la conectare. Verifică datele și încearcă din nou.';
+                          t('auth.login.errors.invalidCredentials');
       
       setLoginMessage({
         type: 'error',
@@ -119,11 +122,11 @@ export default function LoginPage() {
       
       setLoginMessage({
         type: 'success',
-        message: 'Autentificare reușită! Te redirecționăm...'
+        message: t('auth.login.success')
       });
     } catch (error) {
       console.error('Quick login error:', error);
-      toast.error('Eroare la autentificare');
+      toastService.error('error.authentication', t('error.authentication'));
     } finally {
       setLoading(false);
     }
@@ -133,10 +136,10 @@ export default function LoginPage() {
     <>
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-2">
-          Bine ai revenit!
+          {t('auth.login.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-          Intră în cont pentru a continua
+          {t('auth.login.subtitle')}
         </p>
       </div>
 
@@ -158,7 +161,7 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-            Email
+            {t('auth.login.email')}
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 futuristic:text-purple-400 h-5 w-5" />
@@ -167,7 +170,7 @@ export default function LoginPage() {
               type="email"
               id="email"
               className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 placeholder-gray-500 dark:placeholder-gray-400 futuristic:placeholder-purple-300/50 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400 focus:border-transparent transition-colors"
-              placeholder="nume@example.com"
+              placeholder={t('auth.login.emailPlaceholder')}
               autoComplete="email"
             />
           </div>
@@ -178,7 +181,7 @@ export default function LoginPage() {
 
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-            Parolă
+            {t('auth.login.password')}
           </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 futuristic:text-purple-400 h-5 w-5" />
@@ -187,7 +190,7 @@ export default function LoginPage() {
               type={showPassword ? 'text' : 'password'}
               id="password"
               className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 placeholder-gray-500 dark:placeholder-gray-400 futuristic:placeholder-purple-300/50 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400 focus:border-transparent transition-colors"
-              placeholder="••••••••"
+              placeholder={t('auth.login.passwordPlaceholder')}
               autoComplete="current-password"
             />
             <button
@@ -216,7 +219,7 @@ export default function LoginPage() {
               defaultChecked
             />
             <span className="ml-2 text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-              Ține-mă minte
+              {t('auth.login.rememberMe')}
             </span>
           </label>
 
@@ -224,7 +227,7 @@ export default function LoginPage() {
             href="/forgot-password"
             className="text-sm text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
           >
-            Ai uitat parola?
+            {t('auth.login.forgotPassword')}
           </Link>
         </div>
 
@@ -239,12 +242,12 @@ export default function LoginPage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Se încarcă...
+              {t('auth.login.signingIn')}
             </span>
           ) : (
             <>
               <LogIn className="h-5 w-5 mr-2" />
-              Autentifică-te
+              {t('auth.login.signIn')}
             </>
           )}
         </button>
@@ -252,39 +255,14 @@ export default function LoginPage() {
 
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-          Nu ai cont?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link
             href="/register"
             className="font-medium text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
           >
-            Înregistrează-te
+            {t('auth.login.createAccount')}
           </Link>
         </p>
-      </div>
-
-      {/* Butoane pentru login rapid - pentru development/testing */}
-      <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-        <p className="text-xs text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 text-center mb-4">
-          Conturi de test
-        </p>
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => quickLogin('admin@example.com', 'admin123')}
-            disabled={loading}
-            className="w-full px-4 py-2 bg-purple-600 dark:bg-purple-700 futuristic:bg-gradient-to-r futuristic:from-purple-600 futuristic:to-pink-600 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 futuristic:hover:from-purple-700 futuristic:hover:to-pink-700 disabled:opacity-50 text-sm transition-colors"
-          >
-            Login ca Admin (admin@example.com)
-          </button>
-          <button
-            type="button"
-            onClick={() => quickLogin('test@example.com', 'test123')}
-            disabled={loading}
-            className="w-full px-4 py-2 bg-blue-600 dark:bg-blue-700 futuristic:bg-gradient-to-r futuristic:from-blue-600 futuristic:to-cyan-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:from-blue-700 futuristic:hover:to-cyan-700 disabled:opacity-50 text-sm transition-colors"
-          >
-            Login ca User (test@example.com)
-          </button>
-        </div>
       </div>
     </>
   );

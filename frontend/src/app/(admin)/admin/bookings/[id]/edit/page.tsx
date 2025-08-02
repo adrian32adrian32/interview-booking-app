@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useParams, useRouter } from 'next/navigation';
-import axios, { API_URL } from '@/lib/axios';
-import toast from 'react-hot-toast';
+import axios, { API_URL, BASE_URL } from '@/lib/axios';
+import { toastService } from '@/services/toastService';
 import { ArrowLeft, Calendar, Clock, Mail, Phone, User, X, FileText, Eye, Download, Trash2, MapPin, Video, Image as ImageIcon } from 'lucide-react';
 import DocumentUpload from '@/components/DocumentUpload';
 
 export default function EditBookingPage() {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
+  const bookingId = params.id as string; // Extrage ID-ul explicit
+  
   const [booking, setBooking] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,10 +24,18 @@ export default function EditBookingPage() {
     '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
   ]);
 
+  // Debug log pentru ID
   useEffect(() => {
-    fetchBooking();
-    fetchDocuments();
-  }, []);
+    console.log('ID from URL:', bookingId);
+    console.log('Full params:', params);
+  }, [bookingId, params]);
+
+  useEffect(() => {
+    if (bookingId) {
+      fetchBooking();
+      fetchDocuments();
+    }
+  }, [bookingId]);
 
   useEffect(() => {
     if (booking?.interview_date) {
@@ -33,10 +45,13 @@ export default function EditBookingPage() {
 
   const fetchBooking = async () => {
     try {
-      const res = await axios.get(`/bookings/${params.id}`);
+      console.log('Fetching booking with ID:', bookingId);
+      const res = await axios.get(`/bookings/${bookingId}`);
+      console.log('Booking data received:', res.data);
       setBooking(res.data);
     } catch (error) {
-      toast.error('Programare negăsită');
+      console.error('Error fetching booking:', error);
+      toastService.error('error.generic', 'Programare negăsită');
       router.push('/admin/bookings');
     } finally {
       setLoading(false);
@@ -45,12 +60,17 @@ export default function EditBookingPage() {
 
   const fetchDocuments = async () => {
     try {
-      console.log('Fetching documents for booking:', params.id);
-      const res = await axios.get(`/bookings/${params.id}/documents`);
+      console.log('Fetching documents for booking:', bookingId);
+      // Fix pentru URL-ul dublu /api/api/
+      const url = `/bookings/${bookingId}/documents`;
+      console.log('Documents URL:', url);
+      const res = await axios.get(url);
       console.log('Documents received:', res.data);
       setDocuments(res.data.documents || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching documents:', error);
+      console.error('Error response:', error.response?.data);
+      // Nu afișa eroare, doar setează array gol
       setDocuments([]);
     }
   };
@@ -86,8 +106,8 @@ export default function EditBookingPage() {
       return doc.file_url;
     }
     
-    // Altfel, construiește URL-ul complet
-    const baseUrl = API_URL.replace('/api', ''); // Elimină /api din URL
+    // Pentru URL-urile de fișiere, folosim BASE URL fără /api
+    const baseUrl = BASE_URL || 'http://94.156.250.138';
     return `${baseUrl}${doc.file_url || `/uploads/documents/${doc.filename}`}`;
   };
 
@@ -104,10 +124,10 @@ export default function EditBookingPage() {
       
       console.log('Sending data:', dataToSend);
       
-      const response = await axios.put(`/bookings/${params.id}`, dataToSend);
+      const response = await axios.put(`/bookings/${bookingId}`, dataToSend);
       
       if (response.data.success) {
-        toast.success('Programare actualizată cu succes');
+        toastService.success('success.generic', 'Programare actualizată cu succes');
         router.push('/admin/bookings');
       } else {
         const errorData = response.data;
@@ -117,9 +137,9 @@ export default function EditBookingPage() {
     } catch (error: any) {
       console.error('Error details:', error);
       if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
+        toastService.error(error.response.data.error);
       } else {
-        toast.error('Eroare la actualizarea programării');
+        toastService.error('error.updateBooking');
       }
     }
   };
@@ -140,20 +160,20 @@ export default function EditBookingPage() {
       
       console.log('Sending status update with data:', currentBookingData);
       
-      const response = await axios.put(`/bookings/${params.id}`, currentBookingData);
+      const response = await axios.put(`/bookings/${bookingId}`, currentBookingData);
       
       if (response.data.success) {
         setBooking({...booking, status: newStatus});
-        toast.success('Status actualizat cu succes');
+        toastService.success('success.generic', 'Status actualizat cu succes');
       } else {
         throw new Error('Failed to update status');
       }
     } catch (error: any) {
       console.error('Error updating status:', error);
       if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
+        toastService.error(error.response.data.error);
       } else {
-        toast.error('Eroare la actualizarea statusului');
+        toastService.error('error.updateStatus');
       }
     }
   };
@@ -175,7 +195,7 @@ export default function EditBookingPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      toast.success('Document descărcat cu succes');
+      toastService.success('success.generic', 'Document descărcat cu succes');
     } catch (error: any) {
       console.error('Download error:', error);
       
@@ -195,12 +215,12 @@ export default function EditBookingPage() {
           link.click();
           document.body.removeChild(link);
           
-          toast.success('Document descărcat');
+          toastService.success('success.generic', 'Document descărcat');
         } catch (err) {
-          toast.error('Eroare la descărcarea documentului');
+          toastService.error('error.downloading');
         }
       } else {
-        toast.error('Eroare la descărcarea documentului');
+        toastService.error('error.downloading');
       }
     }
   };
@@ -214,20 +234,20 @@ export default function EditBookingPage() {
       
       if (doc && doc.booking_id) {
         // Pentru documente cu booking_id, folosește endpoint-ul de booking
-        await axios.delete(`/bookings/${booking.id}/documents/${docId}`);
+        await axios.delete(`/bookings/${bookingId}/documents/${docId}`);
       } else {
         // Pentru documente fără booking_id (de profil), folosește endpoint-ul general
         await axios.delete(`/upload/document/${docId}`);
       }
       
-      toast.success('Document șters');
+      toastService.success('success.generic', 'Document șters');
       // Reîncarcă documentele după ștergere
       setTimeout(() => {
         fetchDocuments();
       }, 500);
     } catch (error: any) {
       console.error('Delete error:', error);
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.deleting');
     }
   };
 
@@ -267,16 +287,16 @@ export default function EditBookingPage() {
       </button>
 
       <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-6">
-        Editează Programare #{booking.id}
+        Editează Programare #{bookingId}
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formular Date Utilizator */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Date Utilizator</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('edit.date_utilizator')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.email')}</label>
               <input
                 type="email"
                 value={booking.client_email}
@@ -286,7 +306,7 @@ export default function EditBookingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Nume</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.nume')}</label>
               <input
                 type="text"
                 value={booking.client_name || ''}
@@ -296,7 +316,7 @@ export default function EditBookingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Telefon</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.telefon')}</label>
               <input
                 type="text"
                 value={booking.client_phone || ''}
@@ -307,7 +327,7 @@ export default function EditBookingPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Data</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.data')}</label>
                 <div className="mt-1 relative">
                   <input
                     type="date"
@@ -320,7 +340,7 @@ export default function EditBookingPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Ora</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.ora')}</label>
                 <div className="mt-1 relative">
                   <select
                     value={booking.interview_time || ''}
@@ -338,13 +358,13 @@ export default function EditBookingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Tip Interviu</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.tip_interviu')}</label>
               <select
                 value={booking.interview_type || 'in_person'}
                 onChange={(e) => setBooking({...booking, interview_type: e.target.value})}
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
               >
-                <option value="online">Online</option>
+                <option value="online">{t('edit.online')}</option>
                 <option value="in_person">În persoană</option>
               </select>
               <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">
@@ -372,9 +392,9 @@ export default function EditBookingPage() {
                 className="w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
               >
                 <option value="pending">În așteptare</option>
-                <option value="confirmed">Confirmat</option>
-                <option value="cancelled">Anulat</option>
-                <option value="completed">Finalizat</option>
+                <option value="confirmed">{t('edit.confirmat')}</option>
+                <option value="cancelled">{t('edit.anulat')}</option>
+                <option value="completed">{t('edit.finalizat')}</option>
               </select>
             </div>
 
@@ -410,7 +430,7 @@ export default function EditBookingPage() {
           </h2>
           
           <DocumentUpload
-            bookingId={booking.id}
+            bookingId={parseInt(bookingId)}
             documents={documents}
             onUploadComplete={handleUploadComplete}
           />

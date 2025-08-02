@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Eye, Download, Trash2, FileText, Image as ImageIcon, X } from 'lucide-react';
 import { API_URL } from '@/lib/axios';
 

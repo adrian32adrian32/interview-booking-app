@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useParams, useRouter } from 'next/navigation';
 import axios, { API_URL } from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { ArrowLeft, FileText, Eye, Download, X, Calendar, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 
 export default function EditUserPage() {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -47,7 +49,7 @@ export default function EditUserPage() {
         });
       }
     } catch (error) {
-      toast.error('Eroare la încărcarea utilizatorului');
+      toastService.error('error.loading');
       router.push('/admin/users');
     } finally {
       setLoading(false);
@@ -101,12 +103,12 @@ export default function EditUserPage() {
       const res = await axios.put(`/users/${params.id}`, dataToSend);
       
       if (res.data.success) {
-        toast.success('Utilizator actualizat cu succes!');
+        toastService.success('success.generic', 'Utilizator actualizat cu succes!');
         router.push('/admin/users');
       }
     } catch (error: any) {
       console.error('Error updating user:', error);
-      toast.error(error.response?.data?.message || 'Eroare la actualizarea utilizatorului');
+      toastService.error('error.generic', error.response?.data?.message || 'Eroare la actualizarea utilizatorului');
     }
   };
 
@@ -128,12 +130,12 @@ export default function EditUserPage() {
       });
 
       if (res.data.success) {
-        toast.success('Document încărcat cu succes!');
+        toastService.success('success.generic', 'Document încărcat cu succes!');
         fetchAllDocuments(); // Reîncarcă lista de documente
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Eroare la încărcarea documentului');
+      toastService.error('error.loading');
     } finally {
       setUploadingDoc(false);
     }
@@ -144,10 +146,10 @@ export default function EditUserPage() {
 
     try {
       await axios.delete(`/upload/document/${docId}`);
-      toast.success('Document șters cu succes!');
+      toastService.success('success.generic', 'Document șters cu succes!');
       fetchAllDocuments();
     } catch (error) {
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.deleting');
     }
   };
 
@@ -166,10 +168,10 @@ export default function EditUserPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      toast.success('Document descărcat cu succes');
+      toastService.success('success.generic', 'Document descărcat cu succes');
     } catch (error) {
       console.error('Download error:', error);
-      toast.error('Eroare la descărcarea documentului');
+      toastService.error('error.downloading');
     }
   };
 
@@ -206,10 +208,10 @@ export default function EditUserPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Date Utilizator */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Date Utilizator</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('edit.date_utilizator')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.email')}</label>
               <input
                 type="email"
                 value={formData.email}
@@ -221,7 +223,7 @@ export default function EditUserPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Username</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.username')}</label>
               <input
                 type="text"
                 value={formData.username}
@@ -233,29 +235,29 @@ export default function EditUserPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Nume</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.nume')}</label>
                 <input
                   type="text"
                   value={formData.last_name}
                   onChange={(e) => setFormData({...formData, last_name: e.target.value})}
                   className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Nume de familie"
+                  placeholder={t('edit.nume_de_familie')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Prenume</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.prenume')}</label>
                 <input
                   type="text"
                   value={formData.first_name}
                   onChange={(e) => setFormData({...formData, first_name: e.target.value})}
                   className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Prenume"
+                  placeholder={t('edit.prenume')}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Telefon</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.telefon')}</label>
               <input
                 type="text"
                 value={formData.phone}
@@ -267,27 +269,27 @@ export default function EditUserPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Rol</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.rol')}</label>
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
                   className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option value="user">Utilizator</option>
-                  <option value="admin">Administrator</option>
+                  <option value="user">{t('edit.utilizator')}</option>
+                  <option value="admin">{t('edit.administrator')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Status</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('edit.status')}</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({...formData, status: e.target.value})}
                   className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option value="active">Activ</option>
-                  <option value="inactive">Inactiv</option>
-                  <option value="suspended">Suspendat</option>
+                  <option value="active">{t('edit.activ')}</option>
+                  <option value="inactive">{t('edit.inactiv')}</option>
+                  <option value="suspended">{t('edit.suspendat')}</option>
                 </select>
               </div>
             </div>
@@ -328,7 +330,7 @@ export default function EditUserPage() {
         {/* Documente */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Toate Documentele</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('edit.toate_documentele')}</h2>
             <span className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">
               {documents.length} document{documents.length !== 1 ? 'e' : ''}
             </span>

@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { Lock, Eye, EyeOff, Check, X, Loader2 } from 'lucide-react';
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
   const [password, setPassword] = useState('');
@@ -32,12 +34,12 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     
     if (!isPasswordValid) {
-      toast.error('Parola nu îndeplinește toate cerințele');
+      toastService.error('error.generic', t('auth.resetPassword.errors.requirementsFailed'));
       return;
     }
 
     if (!passwordsMatch) {
-      toast.error('Parolele nu coincid');
+      toastService.error('error.passwordMismatch', t('auth.resetPassword.errors.passwordMismatch'));
       return;
     }
 
@@ -49,7 +51,7 @@ export default function ResetPasswordPage() {
       });
       
       if (response.data.success) {
-        toast.success('Parola a fost resetată cu succes!');
+        toastService.success('success.generic', t('auth.resetPassword.successMessage'));
         setTimeout(() => {
           router.push('/login');
         }, 2000);
@@ -57,9 +59,9 @@ export default function ResetPasswordPage() {
     } catch (error: any) {
       if (error.response?.status === 400) {
         setValidToken(false);
-        toast.error('Link-ul de resetare este invalid sau a expirat');
+        toastService.error('error.generic', t('auth.resetPassword.errors.invalidToken'));
       } else {
-        toast.error(error.response?.data?.message || 'Eroare la resetarea parolei');
+        toastService.error('error.generic', error.response?.data?.message || t('auth.resetPassword.errors.resetError'));
       }
     } finally {
       setLoading(false);
@@ -76,12 +78,11 @@ export default function ResetPasswordPage() {
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-2">
-              Link invalid
+              {t('auth.resetPassword.invalidToken')}
             </h2>
             
             <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70 mb-6">
-              Acest link de resetare a parolei este invalid sau a expirat. 
-              Te rugăm să soliciți un nou link.
+              {t('auth.resetPassword.invalidTokenMessage')}
             </p>
 
             <div className="space-y-3">
@@ -89,14 +90,14 @@ export default function ResetPasswordPage() {
                 href="/forgot-password"
                 className="block w-full bg-blue-600 dark:bg-blue-700 futuristic:bg-gradient-to-r futuristic:from-purple-600 futuristic:to-cyan-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:from-purple-700 futuristic:hover:to-cyan-700 transition-colors text-center"
               >
-                Solicită link nou
+                {t('auth.resetPassword.requestNewLink')}
               </Link>
               
               <Link
                 href="/login"
                 className="block w-full text-center text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70 hover:text-gray-900 dark:hover:text-gray-200 futuristic:hover:text-cyan-100"
               >
-                Înapoi la login
+                {t('auth.resetPassword.backToLogin')}
               </Link>
             </div>
           </div>
@@ -111,10 +112,10 @@ export default function ResetPasswordPage() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/50 backdrop-blur-lg rounded-2xl shadow-xl dark:shadow-gray-900/50 futuristic:shadow-purple-500/20 p-8 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">
-              Parolă Nouă
+              {t('auth.resetPassword.title')}
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-              Introdu noua ta parolă
+              {t('auth.resetPassword.subtitle')}
             </p>
           </div>
 
@@ -124,7 +125,7 @@ export default function ResetPasswordPage() {
                 htmlFor="password" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-2"
               >
-                Parola nouă
+                {t('auth.resetPassword.newPassword')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -138,7 +139,7 @@ export default function ResetPasswordPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 futuristic:placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400 focus:border-transparent bg-white dark:bg-gray-700 futuristic:bg-purple-800/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
-                  placeholder="••••••••"
+                  placeholder={t('auth.resetPassword.newPasswordPlaceholder')}
                 />
                 <button
                   type="button"
@@ -159,7 +160,7 @@ export default function ResetPasswordPage() {
                 htmlFor="confirmPassword" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-2"
               >
-                Confirmă parola
+                {t('auth.resetPassword.confirmPassword')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -173,7 +174,7 @@ export default function ResetPasswordPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 futuristic:placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400 focus:border-transparent bg-white dark:bg-gray-700 futuristic:bg-purple-800/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
-                  placeholder="••••••••"
+                  placeholder={t('auth.resetPassword.confirmPasswordPlaceholder')}
                 />
                 <button
                   type="button"
@@ -192,24 +193,24 @@ export default function ResetPasswordPage() {
             {/* Password Requirements */}
             <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-700/50 futuristic:bg-purple-800/20 rounded-lg">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-2">
-                Cerințe parolă:
+                {t('auth.resetPassword.passwordRequirements')}
               </p>
               <div className="space-y-1">
-                {Object.entries({
-                  'Minim 8 caractere': passwordRequirements.length,
-                  'O literă mare': passwordRequirements.uppercase,
-                  'O literă mică': passwordRequirements.lowercase,
-                  'Un număr': passwordRequirements.number,
-                  'Un caracter special (!@#$%^&*)': passwordRequirements.special,
-                }).map(([requirement, met]) => (
-                  <div key={requirement} className="flex items-center text-sm">
+                {[
+                  { key: 'minLength', met: passwordRequirements.length },
+                  { key: 'uppercase', met: passwordRequirements.uppercase },
+                  { key: 'lowercase', met: passwordRequirements.lowercase },
+                  { key: 'number', met: passwordRequirements.number },
+                  { key: 'special', met: passwordRequirements.special },
+                ].map(({ key, met }) => (
+                  <div key={key} className="flex items-center text-sm">
                     {met ? (
                       <Check className="w-4 h-4 text-green-500 mr-2" />
                     ) : (
                       <X className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2" />
                     )}
                     <span className={met ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}>
-                      {requirement}
+                      {t(`auth.resetPassword.requirements.${key}`)}
                     </span>
                   </div>
                 ))}
@@ -221,7 +222,7 @@ export default function ResetPasswordPage() {
                       <X className="w-4 h-4 text-red-500 mr-2" />
                     )}
                     <span className={passwordsMatch ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      Parolele coincid
+                      {t('auth.resetPassword.requirements.match')}
                     </span>
                   </div>
                 )}
@@ -236,10 +237,10 @@ export default function ResetPasswordPage() {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                  Resetez parola...
+                  {t('auth.resetPassword.submitting')}
                 </>
               ) : (
-                'Resetează parola'
+                t('auth.resetPassword.submit')
               )}
             </button>
           </form>
@@ -249,7 +250,7 @@ export default function ResetPasswordPage() {
               href="/login"
               className="text-sm text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-500 dark:hover:text-blue-300 futuristic:hover:text-cyan-300"
             >
-              Înapoi la login
+              {t('auth.resetPassword.backToLogin')}
             </Link>
           </div>
         </div>
@@ -257,3 +258,6 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
+// Force dynamic rendering to avoid pre-rendering issues with auth
+export const dynamic = 'force-dynamic';

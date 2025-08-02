@@ -13,21 +13,25 @@ import {
   Clock,
   BarChart,
   Settings,
+  Mail,
   LogOut,
   Shield
 } from 'lucide-react';
 import AdminRoute from '@/components/AdminRoute';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { useLanguage } from '@/contexts/LanguageContext';
 import NotificationSystem from '@/components/notifications/NotificationSystem';
 
 const navigation = [
-  { name: 'Dashboard', href: '/admin/dashboard', icon: Home },
-  { name: 'Calendar', href: '/admin/calendar', icon: CalendarDays },
-  { name: 'Programări', href: '/admin/bookings', icon: Calendar },
-  { name: 'Utilizatori', href: '/admin/users', icon: Users },
-  { name: 'Setări Program', href: '/admin/time-settings', icon: Clock },
-  { name: 'Statistici', href: '/admin/stats', icon: BarChart },
-  { name: 'Setări', href: '/admin/settings', icon: Settings },
+  { name: 'admin.menu.dashboard', href: '/admin/dashboard', icon: Home },
+  { name: 'admin.menu.calendar', href: '/admin/calendar', icon: CalendarDays },
+  { name: 'admin.menu.bookings', href: '/admin/bookings', icon: Calendar },
+  { name: 'admin.menu.users', href: '/admin/users', icon: Users },
+  { name: 'admin.menu.timeSettings', href: '/admin/time-settings', icon: Clock },
+  { name: 'admin.menu.statistics', href: '/admin/stats', icon: BarChart },
+  { name: 'admin.menu.settings', href: '/admin/settings', icon: Settings },
+  { name: 'admin.menu.emailTemplates', href: '/admin/email-templates', icon: Mail },
 ];
 
 export default function AdminLayout({
@@ -36,6 +40,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -60,7 +65,7 @@ export default function AdminLayout({
               <div className="flex items-center justify-between flex-shrink-0 px-4">
                 <div className="flex items-center">
                   <Shield className="h-8 w-8 text-white dark:text-gray-100 futuristic:text-primary" />
-                  <span className="ml-2 text-white dark:text-gray-100 futuristic:text-foreground text-xl font-semibold">Admin Panel</span>
+                  <span className="ml-2 text-white dark:text-gray-100 futuristic:text-foreground text-xl font-semibold">{t("admin.panel")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <NotificationSystem />
@@ -72,7 +77,7 @@ export default function AdminLayout({
                   const isActive = pathname === item.href;
                   return (
                     <Link
-                      key={item.name}
+                      key={t(item.name)}
                       href={item.href}
                       className={`
                         group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors
@@ -91,12 +96,17 @@ export default function AdminLayout({
                           }
                         `}
                       />
-                      {item.name}
+                      {t(item.name)}
                     </Link>
                   );
                 })}
               </nav>
-            </div>
+            
+              {/* Language Switcher */}
+              <div className="px-4 py-3 border-t border-gray-700 dark:border-gray-800">
+                <LanguageSwitcher compact />
+              </div>
+              </div>
             <div className="flex-shrink-0 flex bg-gray-700 dark:bg-gray-900 futuristic:bg-card/50 p-4">
               <button
                 onClick={handleLogout}
@@ -144,7 +154,7 @@ export default function AdminLayout({
                 <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700 dark:border-gray-900 futuristic:border-border">
                   <div className="flex items-center">
                     <Shield className="h-8 w-8 text-white" />
-                    <span className="ml-2 text-white text-xl font-semibold">Admin Panel</span>
+                    <span className="ml-2 text-white text-xl font-semibold">{t("admin.panel")}</span>
                   </div>
                   <button
                     type="button"
@@ -159,7 +169,7 @@ export default function AdminLayout({
                     const isActive = pathname === item.href;
                     return (
                       <Link
-                        key={item.name}
+                        key={t(item.name)}
                         href={item.href}
                         onClick={() => setSidebarOpen(false)}
                         className={`
@@ -179,7 +189,7 @@ export default function AdminLayout({
                             }
                           `}
                         />
-                        {item.name}
+                        {t(item.name)}
                       </Link>
                     );
                   })}

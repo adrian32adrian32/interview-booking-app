@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { User, Mail, Shield, Save, Phone, Camera, Bell, BellOff, Upload, Loader2, FileText, Eye, Download, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import axios from '@/lib/axios';
 
 export default function ProfilePage() {
+  const { t, language } = useLanguage();
   const { user, refreshUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -73,14 +75,14 @@ export default function ProfilePage() {
       });
 
       if (response.data.success) {
-        toast.success('Profil actualizat cu succes!');
+        toastService.success('success.generic', t('profile.success.profileUpdated'));
         if (refreshUser) {
           refreshUser();
         }
       }
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error(error.response?.data?.message || 'Eroare la actualizarea profilului');
+      toastService.error('error.generic', error.response?.data?.message || t('profile.errors.profileUpdate'));
     } finally {
       setLoading(false);
     }
@@ -98,12 +100,12 @@ export default function ProfilePage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Imaginea nu poate depăși 5MB');
+      toastService.error('error.generic', t('profile.errors.avatarSize'));
       return;
     }
 
     if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-      toast.error('Doar imagini JPG, JPEG sau PNG sunt permise');
+      toastService.error('error.generic', t('profile.errors.avatarType'));
       return;
     }
 
@@ -132,13 +134,13 @@ export default function ProfilePage() {
       if (response.data.success) {
         setAvatarUrl(response.data.avatarUrl);
         setAvatarPreview('');
-        toast.success('Avatar actualizat cu succes!');
+        toastService.success('success.generic', t('profile.success.avatarUpdated'));
         if (refreshUser) {
           refreshUser();
         }
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Eroare la încărcarea avatarului');
+      toastService.error('error.generic', error.response?.data?.message || t('profile.errors.avatarUpload'));
       setAvatarPreview('');
     } finally {
       setUploadingAvatar(false);
@@ -162,26 +164,26 @@ export default function ProfilePage() {
       });
 
       if (response.data.success) {
-        toast.success('Document încărcat cu succes!');
+        toastService.success('success.generic', t('profile.success.documentUploaded'));
         fetchDocuments();
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Eroare la încărcarea documentului');
+      toastService.error('error.generic', t('profile.errors.documentUpload'));
     } finally {
       setUploadingDoc(false);
     }
   };
 
   const handleDeleteDocument = async (docId: number) => {
-    if (!confirm('Ești sigur că vrei să ștergi acest document?')) return;
+    if (!confirm(t('profile.deleteDocumentConfirm'))) return;
 
     try {
       await axios.delete(`/upload/document/${docId}`);
-      toast.success('Document șters cu succes!');
+      toastService.success('success.generic', t('profile.success.documentDeleted'));
       fetchDocuments();
     } catch (error) {
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.generic', t('profile.errors.documentDelete'));
     }
   };
 
@@ -200,15 +202,15 @@ export default function ProfilePage() {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success('Document descărcat cu succes');
+      toastService.success('success.generic', t('profile.success.documentDownloaded'));
     } catch (error) {
-      toast.error('Eroare la descărcarea documentului');
+      toastService.error('error.generic', t('profile.errors.documentDownload'));
     }
   };
 
   const getAvatarUrl = () => {
     if (avatarPreview) return avatarPreview;
-    if (avatarUrl) return `http://94.156.250.138:5000${avatarUrl}`;
+    if (avatarUrl) return `${process.env.NEXT_PUBLIC_API_URL}${avatarUrl}`;
     return null;
   };
 
@@ -221,7 +223,7 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-6">
-        Profilul meu
+        {t('profile.title')}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -275,10 +277,10 @@ export default function ProfilePage() {
                 }
               </h2>
               <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-                {user?.role === 'admin' ? 'Administrator' : 'Utilizator'}
+                {user?.role === 'admin' ? t('profile.administrator') : t('profile.user')}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 mt-1">
-                Click pe cameră pentru a schimba avatarul
+                {t('profile.changeAvatar')}
               </p>
             </div>
           </div>
@@ -288,34 +290,34 @@ export default function ProfilePage() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4 flex items-center">
             <User className="h-5 w-5 mr-2" />
-            Informații personale
+            {t('profile.personalInfo')}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                Nume
+                {t('profile.lastName')}
               </label>
               <input
                 type="text"
                 name="last_name"
                 value={formData.last_name}
                 onChange={handleChange}
-                placeholder="Introdu numele tău"
+                placeholder={t('profile.lastNamePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                Prenume
+                {t('profile.firstName')}
               </label>
               <input
                 type="text"
                 name="first_name"
                 value={formData.first_name}
                 onChange={handleChange}
-                placeholder="Introdu prenumele tău"
+                placeholder={t('profile.firstNamePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400"
               />
             </div>
@@ -324,14 +326,14 @@ export default function ProfilePage() {
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
               <Phone className="inline h-4 w-4 mr-1" />
-              Telefon
+              {t('profile.phone')}
             </label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="+40 7XX XXX XXX"
+              placeholder={t('profile.phonePlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 rounded-lg bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400"
             />
           </div>
@@ -341,13 +343,13 @@ export default function ProfilePage() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4 flex items-center">
             <Mail className="h-5 w-5 mr-2" />
-            Informații cont
+            {t('profile.accountInfo')}
           </h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                Email
+                {t('profile.email')}
               </label>
               <input
                 type="email"
@@ -359,12 +361,12 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80 mb-1">
-                Rol
+                {t('profile.role')}
               </label>
               <div className="flex items-center">
                 <Shield className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400 futuristic:text-purple-400" />
                 <span className="text-gray-700 dark:text-gray-300 futuristic:text-cyan-200">
-                  {user?.role === 'admin' ? 'Administrator' : 'User'}
+                  {user?.role === 'admin' ? t('profile.administrator') : t('profile.user')}
                 </span>
               </div>
             </div>
@@ -375,16 +377,16 @@ export default function ProfilePage() {
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 rounded-lg shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4 flex items-center">
             <Bell className="h-5 w-5 mr-2" />
-            Preferințe Notificări
+            {t('profile.notificationPreferences')}
           </h2>
 
           <div className="space-y-4">
             {[
-              { key: 'bookingConfirmed', label: 'Confirmare programare', desc: 'Primește email când programarea este confirmată' },
-              { key: 'bookingReminder', label: 'Reminder programare', desc: 'Primește reminder cu o zi înainte' },
-              { key: 'bookingCancelled', label: 'Anulare programare', desc: 'Primește notificare la anulare' },
-              { key: 'documentStatus', label: 'Status documente', desc: 'Notificări despre documentele tale' },
-              { key: 'marketing', label: 'Comunicări marketing', desc: 'Noutăți și oferte speciale' },
+              { key: 'bookingConfirmed', label: t('profile.notifications.bookingConfirmed'), desc: t('profile.notifications.bookingConfirmedDesc') },
+              { key: 'bookingReminder', label: t('profile.notifications.bookingReminder'), desc: t('profile.notifications.bookingReminderDesc') },
+              { key: 'bookingCancelled', label: t('profile.notifications.bookingCancelled'), desc: t('profile.notifications.bookingCancelledDesc') },
+              { key: 'documentStatus', label: t('profile.notifications.documentStatus'), desc: t('profile.notifications.documentStatusDesc') },
+              { key: 'marketing', label: t('profile.notifications.marketing'), desc: t('profile.notifications.marketingDesc') },
             ].map((item) => (
               <div key={item.key} className="flex items-start">
                 <div className="flex items-center h-5">
@@ -417,10 +419,10 @@ export default function ProfilePage() {
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 futuristic:text-cyan-100 mb-4 flex items-center justify-between">
             <span className="flex items-center">
               <FileText className="h-5 w-5 mr-2" />
-              Documente
+              {t('profile.documents')}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/70">
-              {documents.length} document{documents.length !== 1 ? 'e' : ''}
+              {documents.length} {documents.length !== 1 ? t('profile.documentsCount') : t('profile.documentCount')}
             </span>
           </h2>
 
@@ -445,10 +447,10 @@ export default function ProfilePage() {
                 <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500 futuristic:text-purple-400" />
               )}
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 futuristic:text-cyan-300/70">
-                {uploadingDoc ? 'Se încarcă...' : 'Click pentru a încărca document'}
+                {uploadingDoc ? t('profile.uploading') : t('profile.uploadDocument')}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-500 futuristic:text-cyan-300/50 mt-1">
-                PDF, JPG, PNG (max 10MB)
+                {t('profile.fileTypes')}
               </p>
             </button>
           </div>
@@ -465,7 +467,9 @@ export default function ProfilePage() {
                         {doc.original_name || doc.file_name || doc.filename}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50">
-                        {new Date(doc.uploaded_at).toLocaleDateString('ro-RO')} - {doc.upload_source}
+                        {new Date(doc.uploaded_at).toLocaleDateString(
+                          language === 'ro' ? 'ro-RO' : language === 'en' ? 'en-US' : `${language}-${language.toUpperCase()}`
+                        )} - {doc.upload_source}
                       </p>
                     </div>
                   </div>
@@ -474,6 +478,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => setPreviewDoc(doc)}
                       className="text-blue-600 dark:text-blue-400 futuristic:text-cyan-400 hover:text-blue-800 dark:hover:text-blue-300"
+                      title={t('documents.preview')}
                     >
                       <Eye className="w-4 h-4" />
                     </button>
@@ -481,6 +486,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => handleDownload(doc)}
                       className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                      title={t('documents.download')}
                     >
                       <Download className="w-4 h-4" />
                     </button>
@@ -488,6 +494,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => handleDeleteDocument(doc.id)}
                       className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                      title={t('documents.delete')}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -497,7 +504,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400 futuristic:text-cyan-300/50 text-center py-4">
-              Nu ai documente încărcate încă
+              {t('profile.noDocuments')}
             </p>
           )}
         </div>
@@ -509,7 +516,7 @@ export default function ProfilePage() {
           className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-white bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-blue-400 futuristic:focus:ring-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <Save className="h-5 w-5 mr-2" />
-          {loading ? 'Se salvează...' : 'Salvează modificările'}
+          {loading ? t('profile.saving') : t('profile.saveChanges')}
         </button>
       </form>
 
@@ -531,13 +538,13 @@ export default function ProfilePage() {
             <div className="flex-1 overflow-auto p-4">
               {previewDoc.mime_type?.includes('image') || previewDoc.file_name?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                 <img
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
                   alt={previewDoc.original_name || previewDoc.file_name}
                   className="max-w-full mx-auto"
                 />
               ) : previewDoc.mime_type?.includes('pdf') || previewDoc.file_name?.match(/\.pdf$/i) ? (
                 <iframe
-                  src={`http://94.156.250.138:5000${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
+                  src={`${process.env.NEXT_PUBLIC_API_URL}${previewDoc.file_url || `/uploads/documents/${previewDoc.filename}`}`}
                   className="w-full h-[70vh]"
                   title={previewDoc.original_name || previewDoc.file_name}
                 />
@@ -545,7 +552,7 @@ export default function ProfilePage() {
                 <div className="text-center py-20">
                   <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 futuristic:text-purple-400 mx-auto mb-4" />
                   <p className="text-gray-600 dark:text-gray-400 futuristic:text-cyan-200">
-                    Previzualizarea nu este disponibilă pentru acest tip de fișier
+                    {t('profile.previewNotAvailable')}
                   </p>
                   <button
                     onClick={() => {
@@ -554,7 +561,7 @@ export default function ProfilePage() {
                     }}
                     className="mt-4 bg-blue-600 dark:bg-blue-700 futuristic:bg-purple-600 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 futuristic:hover:bg-purple-700 transition-colors"
                   >
-                    Descarcă pentru vizualizare
+                    {t('profile.downloadToView')}
                   </button>
                 </div>
               )}

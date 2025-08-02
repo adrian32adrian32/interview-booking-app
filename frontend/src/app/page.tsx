@@ -5,10 +5,10 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-lg text-center">
         <h1 className="text-4xl font-bold mb-4 text-gray-800">
-          Sistem Programări Interviuri
+          Interview Booking System
         </h1>
         <p className="mb-8 text-gray-600">
-          Bine ai venit! Alege o opțiune:
+          Welcome! Choose an option:
         </p>
         <div className="space-x-4">
           <Link
@@ -21,7 +21,7 @@ export default function HomePage() {
             href="/register"
             className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
           >
-            Înregistrare
+            Register
           </Link>
         </div>
       </div>

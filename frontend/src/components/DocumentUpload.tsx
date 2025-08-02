@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Upload, FileText, X } from 'lucide-react';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { API_URL } from '@/lib/axios';
 
 interface DocumentUploadProps {
@@ -46,13 +47,13 @@ export default function DocumentUpload({
     
     // Verifică dimensiunea fișierului (50MB pentru toate tipurile)
     if (file.size > 50 * 1024 * 1024) {
-      toast.error('Fișierul este prea mare. Maxim 50MB.');
+      toastService.error('error.fileTooLarge');
       return;
     }
 
     // Pentru pagina de documente, verifică dacă este selectat un tip
     if (uploadUrl && !documentType) {
-      toast.error('Te rog selectează mai întâi tipul documentului');
+      toastService.error('error.generic', 'Te rog selectează mai întâi tipul documentului');
       return;
     }
 
@@ -106,7 +107,7 @@ export default function DocumentUpload({
       console.log('Upload response:', response.data);
       
       if (response.data.success) {
-        toast.success('Document încărcat cu succes');
+        toastService.success('success.generic', 'Document încărcat cu succes');
         
         // Actualizează lista locală de documente
         if (response.data.document) {
@@ -128,7 +129,7 @@ export default function DocumentUpload({
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           'Eroare la încărcarea documentului';
-      toast.error(errorMessage);
+      toastService.error('error.generic', errorMessage);
     } finally {
       setUploading(false);
       // Reset input
@@ -152,7 +153,7 @@ export default function DocumentUpload({
       
       // Actualizează lista locală
       setUploadedDocs(prev => prev.filter(doc => doc.id !== docId));
-      toast.success('Document șters');
+      toastService.success('success.generic', 'Document șters');
       
       // Apelează callback pentru a reîncărca din server
       if (onUploadComplete) {
@@ -163,7 +164,7 @@ export default function DocumentUpload({
       }
     } catch (error: any) {
       console.error('Delete error:', error);
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.deleting');
     }
   };
 

@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useParams, useRouter } from 'next/navigation';
 import axios from '@/lib/axios';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import { ArrowLeft, Calendar, Clock, Mail, Phone, User, X, FileText, Eye, Download, Trash2 } from 'lucide-react';
 import DocumentUpload from '@/components/DocumentUpload';
 
 export default function EditBookingPage() {
+  const { t } = useLanguage();
   const params = useParams();
   const router = useRouter();
   const [booking, setBooking] = useState<any>(null);
@@ -27,11 +29,11 @@ export default function EditBookingPage() {
       if (bookingData) {
         setBooking(bookingData);
       } else {
-        toast.error('Programare negăsită');
+        toastService.error('error.generic', 'Programare negăsită');
         router.push('/admin/bookings');
       }
     } catch (error) {
-      toast.error('Eroare la încărcarea datelor');
+      toastService.error('error.loading');
     } finally {
       setLoading(false);
     }
@@ -50,10 +52,10 @@ export default function EditBookingPage() {
     e.preventDefault();
     try {
       await axios.put(`/api/bookings/${params.id}`, booking);
-      toast.success('Programare actualizată cu succes');
+      toastService.success('success.generic', 'Programare actualizată cu succes');
       router.push('/admin/bookings');
     } catch (error) {
-      toast.error('Eroare la actualizarea programării');
+      toastService.error('error.updateBooking');
     }
   };
 
@@ -61,9 +63,9 @@ export default function EditBookingPage() {
     try {
       await axios.put(`/api/bookings/${params.id}`, { status: newStatus });
       setBooking({ ...booking, status: newStatus });
-      toast.success('Status actualizat');
+      toastService.success('success.generic', 'Status actualizat');
     } catch (error) {
-      toast.error('Eroare la actualizarea statusului');
+      toastService.error('error.updateStatus');
     }
   };
 
@@ -73,10 +75,10 @@ export default function EditBookingPage() {
       if (filename) {
         window.location.href = `/api/download/document/${filename}`;
       } else {
-        toast.error('Numele fișierului lipsește');
+        toastService.error('error.generic', 'Numele fișierului lipsește');
       }
     } catch (error) {
-      toast.error('Eroare la descărcarea documentului');
+      toastService.error('error.downloading');
     }
   };
 
@@ -85,10 +87,10 @@ export default function EditBookingPage() {
     
     try {
       await axios.delete(`/api/upload/document/${docId}`);
-      toast.success('Document șters');
+      toastService.success('success.generic', 'Document șters');
       fetchDocuments();
     } catch (error) {
-      toast.error('Eroare la ștergerea documentului');
+      toastService.error('error.deleting');
     }
   };
 
@@ -117,10 +119,10 @@ export default function EditBookingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formular Date Utilizator */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Date Utilizator</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('[id].date_utilizator')}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Email</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('[id].email')}</label>
               <input
                 type="email"
                 value={booking.client_email}
@@ -130,7 +132,7 @@ export default function EditBookingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Nume</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('[id].nume')}</label>
               <input
                 type="text"
                 value={booking.client_name || ''}
@@ -140,7 +142,7 @@ export default function EditBookingPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">Telefon</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 futuristic:text-cyan-200/80">{t('[id].telefon')}</label>
               <input
                 type="text"
                 value={booking.client_phone || ''}
@@ -159,9 +161,9 @@ export default function EditBookingPage() {
                 className="w-full rounded-md border-gray-300 dark:border-gray-600 futuristic:border-purple-500/30 bg-white dark:bg-gray-700 futuristic:bg-purple-900/30 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100"
               >
                 <option value="pending">În așteptare</option>
-                <option value="confirmed">Confirmat</option>
-                <option value="cancelled">Anulat</option>
-                <option value="completed">Finalizat</option>
+                <option value="confirmed">{t('[id].confirmat')}</option>
+                <option value="cancelled">{t('[id].anulat')}</option>
+                <option value="completed">{t('[id].finalizat')}</option>
               </select>
             </div>
 
@@ -188,7 +190,7 @@ export default function EditBookingPage() {
 
         {/* Documente */}
         <div className="bg-white dark:bg-gray-800 futuristic:bg-purple-900/20 shadow dark:shadow-gray-700/50 futuristic:shadow-purple-500/20 rounded-lg p-6 border border-gray-200 dark:border-gray-700 futuristic:border-purple-500/30">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">Documente Client</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-gray-100 futuristic:text-cyan-100">{t('[id].documente_client')}</h2>
           
           <DocumentUpload
             bookingId={booking.id}

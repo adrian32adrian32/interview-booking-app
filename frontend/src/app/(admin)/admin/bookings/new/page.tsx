@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useRouter } from 'next/navigation';
 import { format, addDays } from 'date-fns';
 import { ro } from 'date-fns/locale';
@@ -17,7 +18,7 @@ import {
   Save,
   AlertCircle
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { toastService } from '@/services/toastService';
 import axios from '@/lib/axios';
 import TimeSlotPicker from '@/components/booking/TimeSlotPicker';
 
@@ -27,6 +28,7 @@ interface TimeSlot {
 }
 
 export default function NewBookingPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -100,7 +102,7 @@ export default function NewBookingPage() {
             }));
             
             // Afișează mesajul
-            toast.success(`Utilizator găsit: ${fullName}`);
+            toastService.success('success.generic', 'Utilizator găsit: ${fullName}');
           } else {
             setExistingUser(null);
           }
@@ -153,7 +155,7 @@ export default function NewBookingPage() {
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error('Te rog completează toate câmpurile obligatorii');
+      toastService.error('error.generic', 'Te rog completează toate câmpurile obligatorii');
       return;
     }
 
@@ -167,16 +169,16 @@ export default function NewBookingPage() {
         created_by: 'admin'
       });
 
-      toast.success(response.data.message || 'Programare creată cu succes!');
+      toastService.success('success.generic', response.data.message || 'Programare creată cu succes!');
       
       if (formData.send_confirmation) {
-        toast.success('Email de confirmare va fi trimis clientului!');
+        toastService.success('success.generic', 'Email de confirmare va fi trimis clientului!');
       }
       
       router.push('/admin/bookings');
     } catch (error: any) {
       console.error('Error creating booking:', error);
-      toast.error(error.response?.data?.message || 'Eroare la crearea programării');
+      toastService.error('error.generic', error.response?.data?.message || 'Eroare la crearea programării');
     } finally {
       setLoading(false);
     }
