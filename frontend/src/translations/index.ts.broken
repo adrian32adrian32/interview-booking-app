@@ -1,0 +1,513 @@
+export const translations = {
+  en: {
+    nav: {
+      home: "Home",
+      dashboard: "Dashboard",
+      bookings: "Bookings",
+      calendar: "Calendar",
+      profile: "Profile",
+      logout: "Logout",
+      login: "Login",
+      register: "Register"
+    },
+    admin: {
+      panel: "Admin Panel",
+      menu: {
+        dashboard: "Dashboard",
+        calendar: "Calendar",
+        bookings: "Bookings",
+        users: "Users",
+        timeSettings: "Time Settings",
+        statistics: "Statistics",
+        settings: "Settings",
+        emailTemplates: "Email Templates"
+      },
+    dashboard: {
+      title: 'Admin Dashboard',
+      subtitle: 'Monitor performance and manage system',
+      totalUsers: 'Total users',
+      totalBookings: 'Total bookings',
+      viewDetails: 'View details',
+      weeklyEvolution: 'Weekly evolution',
+      totalScheduled: 'Total Scheduled',
+      completed: 'Completed',
+      recentBookings: 'Recent bookings',
+      quickActions: 'Quick actions',
+      newBooking: 'New booking',
+      addUser: 'Add new user',
+      week: 'Week',
+      finalized: 'finalized',
+      cancelled: 'cancelled',
+      pending: 'Pending',
+      confirmed: 'Confirmed',
+      conversionRate: 'Conversion rate',
+      interviewsToday: 'Interviews today',
+      viewStats: 'View statistics',
+      viewAllBookings: 'View all bookings',
+      statusDistribution: 'Status distribution',
+      month: 'Month',
+      createBookingDesc: 'Create a booking for a client',
+      addUserDesc: 'Add a user to the system',
+      freeSlots: 'free slots',
+    },
+      logout: "Logout"
+    },
+    buttons: {
+      save: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      edit: "Edit",
+      add: "Add New",
+      search: "Search",
+      filter: "Filter",
+      export: "Export",
+      back: "Back"
+    },
+    auth: {
+      welcome: "Welcome to Interview Booking System",
+      loginTitle: "Login to your account",
+      registerTitle: "Create new account",
+      email: "Email",
+      password: "Password",
+      confirmPassword: "Confirm Password",
+      forgotPassword: "Forgot password?",
+      rememberMe: "Remember me",
+      loginButton: "Sign In",
+      registerButton: "Sign Up",
+      haveAccount: "Already have an account?",
+      noAccount: "Don't have an account?"
+    }
+  ,
+    settings: {
+      title: "System Settings",
+      email: {
+        title: "Configure Email",
+        enableNotifications: "Enable email notifications",
+        smtpHost: "SMTP Host",
+        port: "Port",
+        testConnection: "Test connection",
+        templates: {
+          title: "Active templates",
+          confirmBooking: "Booking confirmation",
+          reminder: "Reminder (before interview)",
+          cancelNotification: "Cancellation notification"
+        }
+      ,
+    admin: {
+  'panel': 'Panel de Admin',
+  'menu': {
+    'dashboard': 'Panel',
+    'calendar': 'Calendario',
+    'bookings': 'Reservas',
+    'users': 'Usuarios',
+    'timeSettings': 'Configuración de tiempo',
+    'statistics': 'Estadísticas',
+    'settings': 'Ajustes',
+    'emailTemplates': 'Plantillas de correo'
+  },
+  'logout': 'Cerrar sesión',
+}
+  },
+  system: {
+        title: "Configure System",
+        timezone: "Timezone",
+        language: "Language",
+        workingHours: "Working hours",
+        from: "from",
+        to: "to"
+      },
+      save: "Save settings"
+    }
+  },
+  ro: {
+    nav: {
+      home: "Acasă",
+      dashboard: "Panou Control",
+      bookings: "Programări",
+      calendar: "Calendar",
+      profile: "Profil",
+      logout: "Deconectare",
+      login: "Autentificare",
+      register: "Înregistrare"
+    },
+    admin: {
+      panel: "Panou Admin",
+      menu: {
+        dashboard: "Panou Control",
+        calendar: "Calendar",
+        bookings: "Programări",
+        users: "Utilizatori",
+        timeSettings: "Setări Program",
+        statistics: "Statistici",
+        settings: "Setări",
+        emailTemplates: "Șabloane Email"
+      },
+    dashboard: {
+      title: 'Dashboard Admin',
+      subtitle: 'Monitorizează performanța și gestionează sistemul',
+      totalUsers: 'Total utilizatori',
+      totalBookings: 'Total programări',
+      viewDetails: 'Vezi detalii',
+      weeklyEvolution: 'Evoluție săptămânală',
+      totalScheduled: 'Total Programări',
+      completed: 'Completate',
+      recentBookings: 'Programări recente',
+      quickActions: 'Acțiuni rapide',
+      newBooking: 'Programare nouă',
+      addUser: 'Utilizator nou',
+      week: 'Săptămână',
+      finalized: 'finalizate',
+      cancelled: 'anulate',
+      pending: 'În așteptare',
+      confirmed: 'Confirmate',
+      conversionRate: 'Rata de conversie',
+      interviewsToday: 'Interviuri astăzi',
+      viewStats: 'Vezi statistici',
+      viewAllBookings: 'Vezi toate programările',
+      statusDistribution: 'Distribuție status',
+      month: 'Luna',
+      createBookingDesc: 'Crează o programare pentru un client',
+      addUserDesc: 'Adaugă un utilizator în sistem',
+      freeSlots: 'sloturi libere',
+    },
+      logout: "Delogare"
+    },
+    buttons: {
+      save: "Salvează",
+      cancel: "Anulează",
+      delete: "Șterge",
+      edit: "Editează",
+      add: "Adaugă Nou",
+      search: "Caută",
+      filter: "Filtrează",
+      export: "Exportă",
+      back: "Înapoi"
+    },
+    auth: {
+      welcome: "Bine ați venit la Sistemul de Programări Interviuri",
+      loginTitle: "Conectați-vă la cont",
+      registerTitle: "Creați cont nou",
+      email: "Email",
+      password: "Parolă",
+      confirmPassword: "Confirmă Parola",
+      forgotPassword: "Ai uitat parola?",
+      rememberMe: "Ține-mă minte",
+      loginButton: "Conectare",
+      registerButton: "Înregistrare",
+      haveAccount: "Ai deja cont?",
+      noAccount: "Nu ai cont?"
+    }
+  },
+  fr: {
+    nav: {
+      home: "Accueil",
+      dashboard: "Tableau de bord",
+      bookings: "Réservations",
+      calendar: "Calendrier",
+      profile: "Profil",
+      logout: "Déconnexion",
+      login: "Connexion",
+      register: "S'inscrire"
+    ,
+        admin: {
+      panel: 'Panneau Admin',
+      menu: {
+        dashboard: 'Tableau de bord',
+        calendar: 'Calendrier',
+        bookings: 'Réservations',
+        users: 'Utilisateurs',
+        timeSettings: 'Paramètres horaires',
+        statistics: 'Statistiques',
+        settings: 'Paramètres',
+        emailTemplates: "Modèles email"
+      },
+      logout: 'Déconnexion',
+    }
+  },
+  buttons: {
+      save: "Enregistrer",
+      cancel: "Annuler",
+      delete: "Supprimer",
+      edit: "Modifier",
+      add: "Ajouter",
+      search: "Rechercher",
+      filter: "Filtrer",
+      export: "Exporter",
+      back: "Retour"
+    },
+    auth: {
+      welcome: "Bienvenue au Système de Réservation d'Entretiens",
+      loginTitle: "Connectez-vous à votre compte",
+      registerTitle: "Créer un nouveau compte",
+      email: "Email",
+      password: "Mot de passe",
+      confirmPassword: "Confirmer le mot de passe",
+      forgotPassword: "Mot de passe oublié?",
+      rememberMe: "Se souvenir de moi",
+      loginButton: "Se connecter",
+      registerButton: "S'inscrire",
+      haveAccount: "Vous avez déjà un compte?",
+      noAccount: "Pas de compte?"
+    }
+  },
+  ru: {
+    nav: {
+      home: "Главная",
+      dashboard: "Панель управления",
+      bookings: "Бронирования",
+      calendar: "Календарь",
+      profile: "Профиль",
+      logout: "Выйти",
+      login: "Войти",
+      register: "Регистрация"
+    ,
+    admin: {
+  'panel': 'Админ панель',
+  'menu': {
+    'dashboard': 'Панель',
+    'calendar': 'Календарь',
+    'bookings': 'Бронирования',
+    'users': 'Пользователи',
+    'timeSettings': 'Настройки времени',
+    'statistics': 'Статистика',
+    'settings': 'Настройки',
+    'emailTemplates': 'Шаблоны email'
+  },
+  'logout': 'Выйти',
+}
+  },
+  buttons: {
+      save: "Сохранить",
+      cancel: "Отменить",
+      delete: "Удалить",
+      edit: "Редактировать",
+      add: "Добавить",
+      search: "Поиск",
+      filter: "Фильтр",
+      export: "Экспорт",
+      back: "Назад"
+    },
+    auth: {
+      welcome: "Добро пожаловать в систему записи на собеседования",
+      loginTitle: "Войти в аккаунт",
+      registerTitle: "Создать новый аккаунт",
+      email: "Электронная почта",
+      password: "Пароль",
+      confirmPassword: "Подтвердите пароль",
+      forgotPassword: "Забыли пароль?",
+      rememberMe: "Запомнить меня",
+      loginButton: "Войти",
+      registerButton: "Зарегистрироваться",
+      haveAccount: "Уже есть аккаунт?",
+      noAccount: "Нет аккаунта?"
+    }
+  },
+  uk: {
+    nav: {
+      home: "Головна",
+      dashboard: "Панель керування",
+      bookings: "Бронювання",
+      calendar: "Календар",
+      profile: "Профіль",
+      logout: "Вийти",
+      login: "Увійти",
+      register: "Реєстрація"
+    ,
+    admin: {
+  'panel': 'Адмін панель',
+  'menu': {
+    'dashboard': 'Панель',
+    'calendar': 'Календар',
+    'bookings': 'Бронювання',
+    'users': 'Користувачі',
+    'timeSettings': 'Налаштування часу',
+    'statistics': 'Статистика',
+    'settings': 'Налаштування',
+    'emailTemplates': 'Шаблони email'
+  },
+  'logout': 'Вийти',
+}
+  },
+  buttons: {
+      save: "Зберегти",
+      cancel: "Скасувати",
+      delete: "Видалити",
+      edit: "Редагувати",
+      add: "Додати",
+      search: "Пошук",
+      filter: "Фільтр",
+      export: "Експорт",
+      back: "Назад"
+    },
+    auth: {
+      welcome: "Ласкаво просимо до системи запису на співбесіди",
+      loginTitle: "Увійти в обліковий запис",
+      registerTitle: "Створити новий обліковий запис",
+      email: "Електронна пошта",
+      password: "Пароль",
+      confirmPassword: "Підтвердіть пароль",
+      forgotPassword: "Забули пароль?",
+      rememberMe: "Запам'ятати мене",
+      loginButton: "Увійти",
+      registerButton: "Зареєструватися",
+      haveAccount: "Вже є обліковий запис?",
+      noAccount: "Немає облікового запису?"
+    }
+  },
+  de: {
+    nav: {
+      home: "Startseite",
+      dashboard: "Dashboard",
+      bookings: "Buchungen",
+      calendar: "Kalender",
+      profile: "Profil",
+      logout: "Abmelden",
+      login: "Anmelden",
+      register: "Registrieren"
+    ,
+    admin: {
+  'panel': 'Admin-Panel',
+  'menu': {
+    'dashboard': 'Dashboard',
+    'calendar': 'Kalender',
+    'bookings': 'Buchungen',
+    'users': 'Benutzer',
+    'timeSettings': 'Zeiteinstellungen',
+    'statistics': 'Statistiken',
+    'settings': 'Einstellungen',
+    'emailTemplates': 'E-Mail-Vorlagen'
+  },
+  'logout': 'Abmelden',
+}
+  },
+  buttons: {
+      save: "Speichern",
+      cancel: "Abbrechen",
+      delete: "Löschen",
+      edit: "Bearbeiten",
+      add: "Hinzufügen",
+      search: "Suchen",
+      filter: "Filtern",
+      export: "Exportieren",
+      back: "Zurück"
+    },
+    auth: {
+      welcome: "Willkommen beim Interview-Buchungssystem",
+      loginTitle: "Bei Ihrem Konto anmelden",
+      registerTitle: "Neues Konto erstellen",
+      email: "E-Mail",
+      password: "Passwort",
+      confirmPassword: "Passwort bestätigen",
+      forgotPassword: "Passwort vergessen?",
+      rememberMe: "Angemeldet bleiben",
+      loginButton: "Anmelden",
+      registerButton: "Registrieren",
+      haveAccount: "Haben Sie bereits ein Konto?",
+      noAccount: "Noch kein Konto?"
+    }
+  },
+  it: {
+    nav: {
+      home: "Home",
+      dashboard: "Dashboard",
+      bookings: "Prenotazioni",
+      calendar: "Calendario",
+      profile: "Profilo",
+      logout: "Esci",
+      login: "Accedi",
+      register: "Registrati"
+    ,
+    admin: {
+  'panel': 'Pannello Admin',
+  'menu': {
+    'dashboard': 'Dashboard',
+    'calendar': 'Calendario',
+    'bookings': 'Prenotazioni',
+    'users': 'Utenti',
+    'timeSettings': 'Impostazioni orario',
+    'statistics': 'Statistiche',
+    'settings': 'Impostazioni',
+    'emailTemplates': 'Modelli email'
+  },
+  'logout': 'Esci',
+}
+  },
+  buttons: {
+      save: "Salva",
+      cancel: "Annulla",
+      delete: "Elimina",
+      edit: "Modifica",
+      add: "Aggiungi",
+      search: "Cerca",
+      filter: "Filtra",
+      export: "Esporta",
+      back: "Indietro"
+    },
+    auth: {
+      welcome: "Benvenuto nel Sistema di Prenotazione Colloqui",
+      loginTitle: "Accedi al tuo account",
+      registerTitle: "Crea un nuovo account",
+      email: "Email",
+      password: "Password",
+      confirmPassword: "Conferma Password",
+      forgotPassword: "Password dimenticata?",
+      rememberMe: "Ricordami",
+      loginButton: "Accedi",
+      registerButton: "Registrati",
+      haveAccount: "Hai già un account?",
+      noAccount: "Non hai un account?"
+    }
+  },
+  es: {
+    nav: {
+      home: "Inicio",
+      dashboard: "Panel de Control",
+      bookings: "Reservas",
+      calendar: "Calendario",
+      profile: "Perfil",
+      logout: "Cerrar Sesión",
+      login: "Iniciar Sesión",
+      register: "Registrarse"
+    },
+    buttons: {
+      save: "Guardar",
+      cancel: "Cancelar",
+      delete: "Eliminar",
+      edit: "Editar",
+      add: "Añadir",
+      search: "Buscar",
+      filter: "Filtrar",
+      export: "Exportar",
+      back: "Volver"
+    },
+    auth: {
+      welcome: "Bienvenido al Sistema de Reserva de Entrevistas",
+      loginTitle: "Iniciar sesión en su cuenta",
+      registerTitle: "Crear nueva cuenta",
+      email: "Correo electrónico",
+      password: "Contraseña",
+      confirmPassword: "Confirmar Contraseña",
+      forgotPassword: "¿Olvidó su contraseña?",
+      rememberMe: "Recuérdame",
+      loginButton: "Iniciar Sesión",
+      registerButton: "Registrarse",
+      haveAccount: "¿Ya tiene una cuenta?",
+      noAccount: "¿No tiene cuenta?"
+    }
+  }
+};
+
+export default translations;
+export type Language = keyof typeof translations;
+export type TranslationKey = string;
+
+export const languages: { code: Language; name: string; flag: string }[] = [
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'ro', name: 'Română', flag: '🇷🇴' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'uk', name: 'Українська', flag: '🇺🇦' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+];
